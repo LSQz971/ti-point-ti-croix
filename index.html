@@ -132,6 +132,14 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
 }
 .regle b{color:var(--encre)}
 
+/* Sur un téléphone, 15 intersections tiennent mal dans une page à marges :
+   on rend au tapis tout ce que les bordures lui prenaient. */
+@media (max-width:420px){
+  .jeu{ padding:12px 8px; border-radius:14px; }
+  .tapis{ padding:5px; border-width:4px; }
+  .reglages{ gap:7px; }
+}
+
 /* ── le voile du formulaire ───────────────────────────────────────────── */
 .voile{
   position:fixed;inset:0;z-index:10;display:grid;place-items:center;
