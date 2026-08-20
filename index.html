@@ -17,7 +17,8 @@
   --encre:      #F2F7F0;
   --encre-2:    #A9C8B2;
   --point:      #E4231C;   /* le point : rouge, comme au stylo */
-  --croix:      #2F6BFF;   /* la croix : bleue, comme au stylo */
+  --croix:      #FFC91E;   /* la croix : jaune, comme au stylo */
+  --barre:      #2F6BFF;   /* le trait qui barre les 5 alignés : bleu */
   --or:         #F0C64B;
   --trait:      rgba(4,34,16,.60);
   --pas:        clamp(14px,4vw,22px);
@@ -112,16 +113,19 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
 
 /* le point : un petit cercle creux, tracé au stylo rouge */
 .marque--point{fill:none;stroke:var(--point);stroke-width:2.3}
-/* la croix : deux petits traits, tracés au stylo bleu */
+/* la croix : deux petits traits, tracés au stylo jaune */
 .marque--croix{stroke:var(--croix);stroke-width:2.5;stroke-linecap:round}
-/* l'ombre portée détache les deux encres du feutre : sans elle, le bleu
-   et le vert ont la même clarté et la marque se noie dans le tapis */
+/* l'ombre portée détache les deux encres du feutre : sans elle, une marque
+   de même clarté que le vert se noie dans le tapis */
 .marque{filter:drop-shadow(0 1px 2px rgba(0,0,0,.60))}
 .marque{animation:poser .18s ease-out}
 @keyframes poser{from{opacity:0;transform-box:fill-box;transform-origin:center;transform:scale(.4)}to{opacity:1}}
-.dernier{fill:none;stroke:var(--or);stroke-width:1.2;opacity:.85}
-.barre{stroke:var(--or);stroke-width:4;stroke-linecap:round;opacity:.95;
-  filter:drop-shadow(0 0 5px rgba(240,198,75,.65))}
+/* l'anneau du dernier coup joué : blanc, pour ne pas se confondre avec le
+   jaune des croix ni avec le bleu du trait de victoire */
+.dernier{fill:none;stroke:#FFFFFF;stroke-width:1.2;opacity:.75}
+/* le trait qui barre les 5 alignés : bleu */
+.barre{stroke:var(--barre);stroke-width:4.5;stroke-linecap:round;opacity:.98;
+  filter:drop-shadow(0 0 6px rgba(47,107,255,.75))}
 .gagnant{animation:battre .75s ease-in-out infinite alternate}
 @keyframes battre{to{opacity:.45}}
 
@@ -197,7 +201,7 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
 
   <p class="regle"><b>Règle :</b> pose ta marque sur un croisement de la grille (15 × 15) et
   aligne <b>5 marques</b> à l'horizontale, à la verticale ou en diagonale avant
-  l'adversaire. Les <b>points rouges</b> ouvrent, les <b>croix bleues</b> répondent.
+  l'adversaire. Les <b>points rouges</b> ouvrent, les <b>croix jaunes</b> répondent.
   À deux, on joue chacun son tour sur le même écran. Quand le temps tombe, le logo
   clignote.</p>
 
@@ -224,7 +228,12 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
 
 var TAILLE = 15, ALIGNEMENT = 5;
 var DIRS = [[0,1],[1,0],[1,1],[1,-1]];
-var VAL = [0, 1, 12, 150, 2200, 100000];   /* valeur d'une fenêtre de 5 selon le nombre de pions */
+/* Valeur d'une fenêtre de 5 selon le nombre de pions qu'on y a, l'adversaire
+   étant absent. L'échelle est volontairement RAIDE : un trois vaut 25 fois un
+   deux, un quatre 20 fois un trois. C'est ce qui fait qu'un alignement naissant
+   est traité comme une urgence et pas comme un détail, et c'est de là que vient
+   l'essentiel de la force de jeu, bien avant la profondeur de recherche. */
+var VAL = [0, 1, 24, 600, 12000, 500000];
 
 /* Le formulaire L'SQz de CE jeu, hébergé sur Tally, qui atterrit dans la
    base Notion « Inscrits à l'indice » : page 1 les questions sur les ateliers,
@@ -235,14 +244,27 @@ var VAL = [0, 1, 12, 150, 2200, 100000];   /* valeur d'une fenêtre de 5 selon l
 var TALLY = "1AQxXb";
 var STOCKAGE = "ti-point-ti-croix/v1";
 
-/* Les trois niveaux. Aucun ne joue plus au hasard : tous gagnent quand ils
-   peuvent et bloquent quand il le faut. « Facile » hésite entre ses trois
-   meilleurs coups, « moyenne » voit un coup à l'avance, « difficile » trois. */
+/* Les trois niveaux. Tous gagnent quand ils peuvent et bloquent une victoire
+   immédiate : personne ne joue au hasard. Ce qui les sépare :
+
+   - `profondeur`  : combien de coups à l'avance il calcule ;
+   - `defense`     : le poids qu'il donne aux menaces de l'adversaire. En
+                     dessous de 1, il pense à son attaque avant ta défense,
+                     ce qui laisse construire tranquillement contre lui ;
+   - `hesitation`  : parmi combien de ses meilleurs coups il tire au sort ;
+   - `menaces`     : s'il repère les coups qui créent DEUX menaces à la fois,
+                     la seule vraie technique du jeu. C'est ce qui fait la
+                     différence entre un adversaire correct et un mur.      */
 var NIVEAUX = {
-  facile:    { profondeur: 0, defense: 0.85, hesitation: 3 },
-  moyenne:   { profondeur: 2, defense: 1.00, hesitation: 1 },
-  difficile: { profondeur: 4, defense: 1.15, hesitation: 1 }
+  facile:    { profondeur: 0, defense: 0.35, hesitation: 5, menaces: false },
+  moyenne:   { profondeur: 2, defense: 1.00, hesitation: 1, menaces: false },
+  difficile: { profondeur: 6, defense: 1.00, hesitation: 1, menaces: true  }
 };
+
+/* Largeur de recherche selon la profondeur restante : on regarde large près
+   de la racine, étroit au fond. Sans ce rétrécissement, la profondeur 6
+   coûterait des secondes au lieu de quelques dizaines de millisecondes. */
+var LARGEUR = [4, 4, 6, 6, 8, 10, 12];
 
 var PAS = 34, MARGE = 22;
 var COTE = MARGE * 2 + (TAILLE - 1) * PAS;
@@ -442,7 +464,7 @@ function candidats(combien, portee){
 
 function minimax(profondeur, alpha, beta, maximise, defense){
   if (profondeur === 0) return evaluerPlateau(defense);
-  var liste = candidats(profondeur >= 3 ? 8 : 10, 1);
+  var liste = candidats(LARGEUR[profondeur] || 4, 1);
   if (!liste.length) return evaluerPlateau(defense);
   var i, m, v;
   if (maximise){
@@ -471,6 +493,36 @@ function minimax(profondeur, alpha, beta, maximise, defense){
   return pire;
 }
 
+/* Combien de menaces distinctes ce coup crée-t-il ? Une menace, c'est une
+   direction où poser cette marque met le joueur à un coup de gagner, ou lui
+   donne un trois ouvert. Un coup qui en crée DEUX est gagnant : l'adversaire
+   ne peut en boucher qu'une. C'est la seule vraie technique du morpion à 5,
+   et c'est elle qui manquait au niveau difficile. */
+function menacesCreees(r, c, qui){
+  var contre = qui === "IA" ? "P" : "IA", compte = 0, d, dr, dc, s, r0, c0, k, rr, cc, a, b, meilleur;
+  for (d = 0; d < 4; d++){
+    dr = DIRS[d][0]; dc = DIRS[d][1];
+    meilleur = 0;
+    for (s = -4; s <= 0; s++){
+      r0 = r + dr*s; c0 = c + dc*s;
+      if (!dedans(r0,c0) || !dedans(r0 + dr*4, c0 + dc*4)) continue;
+      a = 1; b = 0;
+      for (k = 0; k < 5; k++){
+        rr = r0 + dr*k; cc = c0 + dc*k;
+        if (rr === r && cc === c) continue;
+        var v2 = plateau[rr][cc];
+        if (v2 === qui) a++; else if (v2 === contre) b++;
+      }
+      if (!b && a > meilleur) meilleur = a;
+    }
+    /* On compte les DIRECTIONS menaçantes, pas les menaces. Un seul « quatre »
+       ne gagne rien, il se bouche. Ce qui gagne, c'est deux directions à la
+       fois : l'adversaire n'en bouche qu'une. */
+    if (meilleur >= 3) compte += 1;
+  }
+  return compte;
+}
+
 function choisirCoup(){
   var n = NIVEAUX[$("#difficulte").value] || NIVEAUX.moyenne;
   var liste = candidats(14, 2), i, m, notes = [], v;
@@ -484,6 +536,23 @@ function choisirCoup(){
   for (i = 0; i < liste.length; i++){
     m = liste[i]; plateau[m.r][m.c] = "P"; v = gagne(m.r,m.c,"P"); plateau[m.r][m.c] = "";
     if (v) return m;
+  }
+
+  /* Le niveau difficile joue la double menace, et surtout il l'ÉTOUFFE chez
+     l'adversaire avant qu'elle n'existe. C'est ce qui le rend pénible : on ne
+     peut plus lui préparer un piège tranquillement. */
+  if (n.menaces){
+    for (i = 0; i < liste.length; i++){
+      m = liste[i];
+      if (menacesCreees(m.r, m.c, "IA") >= 2) return m;
+    }
+    var danger = null, pire = 1;
+    for (i = 0; i < liste.length; i++){
+      m = liste[i];
+      v = menacesCreees(m.r, m.c, "P");
+      if (v > pire){ pire = v; danger = m; }
+    }
+    if (danger) return danger;
   }
 
   for (i = 0; i < liste.length; i++){
@@ -507,12 +576,12 @@ function choisirCoup(){
 function duo(){ return $("#mode").value === "duo"; }
 
 function annonce(){
-  if (duo()) return tour === "P" ? "🔴 Aux points de jouer" : "🔵 Aux croix de jouer";
+  if (duo()) return tour === "P" ? "🔴 Aux points de jouer" : "🟡 Aux croix de jouer";
   return "À toi de jouer";
 }
 
 function victoire(qui){
-  if (duo()) return qui === "P" ? "🔴 Les points gagnent !" : "🔵 Les croix gagnent !";
+  if (duo()) return qui === "P" ? "🔴 Les points gagnent !" : "🟡 Les croix gagnent !";
   return qui === "P" ? "🎉 Bravo, tu as gagné !" : "😈 L'ordinateur a gagné";
 }
 
