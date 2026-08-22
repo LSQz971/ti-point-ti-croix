@@ -234,6 +234,29 @@ var DIRS = [[0,1],[1,0],[1,1],[1,-1]];
    est traité comme une urgence et pas comme un détail, et c'est de là que vient
    l'essentiel de la force de jeu, bien avant la profondeur de recherche. */
 var VAL = [0, 1, 24, 600, 12000, 500000];
+/* ... et selon qu'elle RESPIRE. Une fenêtre coincée entre deux pions adverses
+   ou deux bords se bouche d'un seul coup ; celle qui a ses deux extrémités
+   libres, c'est le trois ouvert, la seule forme qui oblige l'adversaire à
+   répondre. Sans cette distinction, l'ordinateur compte un trois mort comme
+   un trois vivant, donc il joue à côté : c'est de là que venait sa mollesse
+   en milieu de partie. Ne s'applique qu'aux deux et aux trois ; un quatre
+   oblige à répondre, ouvert ou pas. */
+var SOUFFLE = [0.1, 0.5, 6];    /* 0, 1 ou 2 extrémités libres */
+/* Ces trois nombres ne sont pas décoratifs : ils ont été RÉGLÉS au banc
+   d'essai, en faisant jouer le moteur contre lui-même augmenté d'une
+   recherche de gain forcé. Avec [0.15, 0.6, 3] il perdait la moitié de ses
+   parties, avec [0.1, 0.5, 6] il en perd une sur douze. Tout tient au dernier
+   chiffre : c'est le prix d'un trois OUVERT, la forme qui oblige l'autre à
+   répondre. Le sous-évaluer, c'est jouer à côté du sujet. Ne pas y toucher
+   sans refaire tourner test_moteur.js. */
+
+/* Combien d'extrémités libres a la fenêtre de 5 qui part de (r,c) ? */
+function souffle(r, c, dr, dc){
+  var n = 0, ar = r - dr, ac = c - dc, br = r + dr*5, bc = c + dc*5;
+  if (dedans(ar,ac) && plateau[ar][ac] === "") n++;
+  if (dedans(br,bc) && plateau[br][bc] === "") n++;
+  return n;
+}
 
 /* Le formulaire L'SQz de CE jeu, hébergé sur Tally, qui atterrit dans la
    base Notion « Inscrits à l'indice » : page 1 les questions sur les ateliers,
@@ -245,26 +268,96 @@ var TALLY = "1AQxXb";
 var STOCKAGE = "ti-point-ti-croix/v1";
 
 /* Les trois niveaux. Tous gagnent quand ils peuvent et bloquent une victoire
-   immédiate : personne ne joue au hasard. Ce qui les sépare :
+   immédiate : personne ne joue au hasard. Au-delà, ils ne jouent pas du tout
+   le même jeu.
 
-   - `profondeur`  : combien de coups à l'avance il calcule ;
-   - `defense`     : le poids qu'il donne aux menaces de l'adversaire. En
-                     dessous de 1, il pense à son attaque avant ta défense,
-                     ce qui laisse construire tranquillement contre lui ;
-   - `hesitation`  : parmi combien de ses meilleurs coups il tire au sort ;
-   - `menaces`     : s'il repère les coups qui créent DEUX menaces à la fois,
-                     la seule vraie technique du jeu. C'est ce qui fait la
-                     différence entre un adversaire correct et un mur.      */
+   FACILE ne calcule rien, et c'est voulu : on doit toujours le battre.
+   - `mou`         parmi combien de SES meilleurs croisements il tire au sort ;
+   - `bride`       à partir de combien de croisements gagnants il s'abstient.
+
+   MOYENNE et DIFFICILE calculent.
+   - `profondeur`  combien de coups à l'avance ;
+   - `defense`     le poids donné aux menaces de l'adversaire. En dessous de 1,
+                   il pense à son attaque avant ta défense ;
+   - `hesitation`  parmi combien de ses meilleurs coups il tire au sort ;
+   - `menaces`     s'il déroule l'échelle des menaces et cherche les gains
+                   forcés. C'est toute la différence entre un adversaire
+                   correct et un mur.
+
+   Ces trois lignes sont réglées AU BANC, chacune contre les adversaires qui
+   la concernent, et chacune tient une promesse précise :
+
+     facile     on doit TOUJOURS le battre. Mesuré : 288 parties contre quatre
+                profils de joueurs, zéro défaite du joueur.
+     moyenne    on doit le battre, mais il faut jouer : une vingtaine de coups
+                pour un joueur qui sait s'y prendre, et il gagne encore une
+                partie sur cinq. Un débutant, lui, ne le bat pas.
+     difficile  on ne doit JAMAIS le battre.
+
+   MOYENNE ne calcule pas à l'avance (profondeur 0) : il lit bien la position
+   du moment, mais il ne voit pas le coup d'après, et il hésite entre ses trois
+   meilleurs coups. C'est de là que vient sa faille, et c'est voulu. Avec le
+   calcul à deux coups qu'il avait, il devenait imbattable : un joueur solide
+   ne lui prenait que 3 parties sur 48.
+
+   Les modifier au jugé casse les promesses affichées dans le menu ;
+   test_moteur.js les vérifie une par une. */
 var NIVEAUX = {
-  facile:    { profondeur: 0, defense: 0.35, hesitation: 5, menaces: false },
-  moyenne:   { profondeur: 2, defense: 1.00, hesitation: 1, menaces: false },
+  facile:    { mou: 12, bride: 1 },
+  moyenne:   { profondeur: 0, defense: 1.00, hesitation: 3, menaces: false },
   difficile: { profondeur: 6, defense: 1.00, hesitation: 1, menaces: true  }
 };
 
 /* Largeur de recherche selon la profondeur restante : on regarde large près
    de la racine, étroit au fond. Sans ce rétrécissement, la profondeur 6
-   coûterait des secondes au lieu de quelques dizaines de millisecondes. */
-var LARGEUR = [4, 4, 6, 6, 8, 10, 12];
+   coûterait des secondes au lieu de quelques dizaines de millisecondes.
+   Réglé au banc : resserrer ces nombres rend le moteur à la fois MEILLEUR et
+   plus rapide, parce que le temps gagné va dans la profondeur au lieu de
+   partir dans des coups que le classement avait déjà écartés. */
+var LARGEUR = [4, 4, 4, 6, 6, 8, 10];
+/* Combien de coups on creuse à la racine. Au-delà, on paie des millisecondes
+   pour des coups que le classement a déjà écartés. À ne pas confondre avec la
+   liste des candidats, qui reste entière : on REGARDE tout, on ne CALCULE
+   que le haut du panier. */
+var LARGEUR_RACINE = 8;
+/* Combien de quatres d'affilée on déroule dans la recherche de gain forcé.
+   Six suffit largement : au-delà, les chaînes qui existent vraiment sont
+   rarissimes et le temps de réponse commence à se voir au doigt. */
+var PROFONDEUR_FORCE = 6;
+/* Une recherche forcée peut s'emballer sur une position touffue : on lui donne
+   un nombre de nœuds, pas une seconde de plus. Au-delà elle répond « je ne
+   trouve pas ». C'est la réponse sûre : on n'annonce pas une victoire qu'on
+   n'a pas démontrée, et côté défense on retombe simplement sur le calcul
+   ordinaire. Sans ce garde-fou, un coup pouvait demander cinq secondes. */
+var BUDGET_FORCE = 3000;
+/* La recherche large est un arbre ET/OU : chaque trois ouvert ouvre autant de
+   branches que l'adversaire a de parades. Elle se paie donc en nœuds, pas en
+   profondeur, d'où un budget plus gros et une profondeur plus courte. */
+var PROFONDEUR_MENACE = 4;
+var BUDGET_MENACE = 6000;
+/* Chercher aussi SA PROPRE suite de menaces, et pas seulement celle de
+   l'adversaire. C'est ce qui compense le coup d'avance de celui qui ouvre :
+   au lieu de subir et de parer, le moteur fabrique à son tour la fourchette
+   que l'autre prépare. */
+var ATTAQUE_LARGE = 1;
+var budgetForce = 0;
+
+/* Les deux points d'entrée : ils remettent le compteur à zéro.
+   `chercherGain`   n'enchaîne que des quatres. Exact : ce qu'il annonce est
+                    démontré, on peut donc le JOUER.
+   `chercherMenace` s'autorise les trois ouverts. Beaucoup plus large, mais la
+                    liste des parades adverses est approchée : il peut voir une
+                    victoire qui n'en est pas une. On ne s'en sert donc QUE
+                    pour la défense, où se tromper coûte un coup et jamais la
+                    partie. */
+function chercherGain(qui){
+  budgetForce = BUDGET_FORCE;
+  return gainForce(qui, PROFONDEUR_FORCE);
+}
+function chercherMenace(qui){
+  budgetForce = BUDGET_MENACE;
+  return gainForce(qui, PROFONDEUR_MENACE, true);
+}
 
 var PAS = 34, MARGE = 22;
 var COTE = MARGE * 2 + (TAILLE - 1) * PAS;
@@ -410,7 +503,10 @@ function evaluerPlateau(defense){
         if (v === "IA") a++; else if (v === "P") b++;
       }
       if (a && b) continue;
-      if (a) total += VAL[a]; else if (b) total -= VAL[b] * defense;
+      if (!a && !b) continue;
+      k = a || b;
+      v = VAL[k] * (k === 2 || k === 3 ? SOUFFLE[souffle(r,c,dr,dc)] : 1);
+      if (a) total += v; else total -= v * defense;
     }
   }
   return total;
@@ -432,28 +528,41 @@ function evaluerCoup(r,c,qui){
         v = plateau[rr][cc];
         if (v === qui) a++; else if (v === contre) b++;
       }
-      if (!b) total += VAL[a];
+      if (!b) total += VAL[a] * (a === 2 || a === 3 ? SOUFFLE[souffle(r0,c0,dr,dc)] : 1);
     }
   }
   return total;
 }
 
-function voisine(r,c,portee){
-  for (var dr = -portee; dr <= portee; dr++) for (var dc = -portee; dc <= portee; dc++){
+/* Y a-t-il un pion à portée ? Avec `qui`, on ne regarde que les siens :
+   une menace à soi ne peut naître qu'au contact de ses propres pions, et ne
+   balayer que ceux-là divise par deux le travail de la recherche forcée. */
+function voisine(r,c,portee,qui){
+  var dr, dc, v;
+  for (dr = -portee; dr <= portee; dr++) for (dc = -portee; dc <= portee; dc++){
     if (!dr && !dc) continue;
-    if (dedans(r+dr,c+dc) && plateau[r+dr][c+dc] !== "") return true;
+    if (!dedans(r+dr,c+dc)) continue;
+    v = plateau[r+dr][c+dc];
+    if (v !== "" && (!qui || v === qui)) return true;
   }
   return false;
 }
 
 /* Les coups plausibles, les meilleurs d'abord : c'est ce tri qui rend
    l'élagage alpha-bêta efficace, et donc le niveau difficile jouable. */
-function candidats(combien, portee){
+/* Les croisements libres au contact d'un pion, sans classement : la recherche
+   de gain forcé n'a pas besoin d'un tri, elle a besoin d'aller vite. */
+function libresAuContact(portee, qui){
   var liste = [], r, c;
-  for (r = 0; r < TAILLE; r++) for (c = 0; c < TAILLE; c++){
-    if (plateau[r][c] !== "" || !voisine(r,c,portee)) continue;
-    liste.push({ r:r, c:c, note: evaluerCoup(r,c,"IA") + evaluerCoup(r,c,"P") });
-  }
+  for (r = 0; r < TAILLE; r++) for (c = 0; c < TAILLE; c++)
+    if (plateau[r][c] === "" && voisine(r,c,portee,qui)) liste.push({ r:r, c:c });
+  return liste;
+}
+
+function candidats(combien, portee){
+  var liste = libresAuContact(portee), i;
+  for (i = 0; i < liste.length; i++)
+    liste[i].note = evaluerCoup(liste[i].r, liste[i].c, "IA") + evaluerCoup(liste[i].r, liste[i].c, "P");
   if (!liste.length){
     var m = (TAILLE - 1) >> 1;
     return plateau[m][m] === "" ? [{r:m,c:m}] : [];
@@ -493,39 +602,243 @@ function minimax(profondeur, alpha, beta, maximise, defense){
   return pire;
 }
 
-/* Combien de menaces distinctes ce coup crée-t-il ? Une menace, c'est une
-   direction où poser cette marque met le joueur à un coup de gagner, ou lui
-   donne un trois ouvert. Un coup qui en crée DEUX est gagnant : l'adversaire
-   ne peut en boucher qu'une. C'est la seule vraie technique du morpion à 5,
-   et c'est elle qui manquait au niveau difficile. */
-function menacesCreees(r, c, qui){
-  var contre = qui === "IA" ? "P" : "IA", compte = 0, d, dr, dc, s, r0, c0, k, rr, cc, a, b, meilleur;
-  for (d = 0; d < 4; d++){
-    dr = DIRS[d][0]; dc = DIRS[d][1];
-    meilleur = 0;
-    for (s = -4; s <= 0; s++){
-      r0 = r + dr*s; c0 = c + dc*s;
-      if (!dedans(r0,c0) || !dedans(r0 + dr*4, c0 + dc*4)) continue;
-      a = 1; b = 0;
-      for (k = 0; k < 5; k++){
-        rr = r0 + dr*k; cc = c0 + dc*k;
-        if (rr === r && cc === c) continue;
-        var v2 = plateau[rr][cc];
-        if (v2 === qui) a++; else if (v2 === contre) b++;
-      }
-      if (!b && a > meilleur) meilleur = a;
+/* ─────────────────────────────────────────────────── lire les menaces ──
+   Le morpion à 5 se gagne sur les MENACES, pas sur le nombre de pions
+   posés. Trois formes seulement comptent, et il faut savoir les
+   distinguer sous peine de perdre en croyant attaquer :
+
+     quatre         un seul croisement complète le cinq. L'adversaire est
+                    obligé de le boucher : le coup est forcé.
+     quatre ouvert  DEUX croisements le complètent. On n'en bouche qu'un :
+                    c'est gagné au coup suivant, il n'y a pas de parade.
+     trois ouvert   un croisement le transforme en quatre ouvert. Il faut
+                    donc y répondre tout de suite : laisser vivre un trois
+                    ouvert adverse, c'est perdre avec un coup de retard.
+
+   L'ancienne version comptait « une direction où j'ai trois pions dans une
+   fenêtre de cinq ». Un trois adossé au bord ou déjà bouché comptait autant
+   qu'un trois ouvert, et un quatre autant qu'un trois. Elle courait donc
+   après ses propres mirages pendant qu'on lui montait une diagonale sous le
+   nez, et elle ne bouchait jamais un trois ouvert. C'est par là qu'on la
+   battait en quelques coups. */
+
+/* Les croisements vides qui, dans CETTE direction, complètent un cinq
+   passant par (r,c) ; (r,c) porte déjà la marque de `qui`. Renvoie [-1]
+   quand le cinq est déjà fait. Un ou zéro trou par fenêtre : deux trous,
+   ce n'est pas un quatre. */
+function completions(r, c, d, qui){
+  var contre = qui === "IA" ? "P" : "IA", dr = DIRS[d][0], dc = DIRS[d][1];
+  var res = [], s, k, r0, c0, rr, cc, a, trou, v;
+  for (s = -4; s <= 0; s++){
+    r0 = r + dr*s; c0 = c + dc*s;
+    if (!dedans(r0,c0) || !dedans(r0 + dr*4, c0 + dc*4)) continue;
+    a = 0; trou = -1;
+    for (k = 0; k < 5; k++){
+      rr = r0 + dr*k; cc = c0 + dc*k; v = plateau[rr][cc];
+      if (v === qui) a++;
+      else if (v === contre){ a = -9; break; }
+      else if (trou < 0) trou = rr * TAILLE + cc;
+      else { a = -9; break; }
     }
-    /* On compte les DIRECTIONS menaçantes, pas les menaces. Un seul « quatre »
-       ne gagne rien, il se bouche. Ce qui gagne, c'est deux directions à la
-       fois : l'adversaire n'en bouche qu'une. */
-    if (meilleur >= 3) compte += 1;
+    if (a === 5) return [-1];
+    if (a === 4 && trou >= 0 && res.indexOf(trou) < 0) res.push(trou);
   }
-  return compte;
+  return res;
+}
+
+/* Ce que vaut un coup en (r,c) dans une direction, pour `qui` :
+   5 cinq | 4.5 quatre ouvert | 4 quatre | 3 trois ouvert | 0 rien.
+   Le trois ouvert se reconnaît à sa suite : il existe un croisement libre
+   sur la ligne qui, joué, donnerait un quatre OUVERT. Un trois qui ne mène
+   nulle part ne vaut rien, et c'est bien tout le sujet. */
+function niveauMenace(r, c, d, qui){
+  var comp = completions(r, c, d, qui);
+  if (comp.length === 1 && comp[0] === -1) return 5;
+  if (comp.length >= 2) return 4.5;
+  if (comp.length === 1) return 4;
+  var dr = DIRS[d][0], dc = DIRS[d][1], s, rr, cc, suite;
+  for (s = -4; s <= 4; s++){
+    if (!s) continue;
+    rr = r + dr*s; cc = c + dc*s;
+    if (!dedans(rr,cc) || plateau[rr][cc] !== "") continue;
+    plateau[rr][cc] = qui;
+    suite = completions(rr, cc, d, qui);
+    plateau[rr][cc] = "";
+    if (suite.length >= 2) return 3;
+  }
+  return 0;
+}
+
+/* Les croisements qui feraient cinq si `qui` posait en (r,c), toutes
+   directions confondues. Aucun : le coup ne force rien. UN : c'est un quatre,
+   l'adversaire est obligé d'aller le boucher là et nulle part ailleurs. DEUX :
+   quatre ouvert ou double quatre, il n'en bouche qu'un, la partie est finie.
+   Renvoie [-1] quand le coup fait cinq tout de suite. */
+function complements(r, c, qui){
+  var res = [], d, comp, i;
+  plateau[r][c] = qui;
+  for (d = 0; d < 4; d++){
+    comp = completions(r, c, d, qui);
+    if (comp.length === 1 && comp[0] === -1){ plateau[r][c] = ""; return [-1]; }
+    for (i = 0; i < comp.length; i++) if (res.indexOf(comp[i]) < 0) res.push(comp[i]);
+  }
+  plateau[r][c] = "";
+  return res;
+}
+
+/* Le plus grand nombre de pions à soi qu'une fenêtre propre de cinq réunit en
+   passant par ici. Sous trois, aucune menace n'est possible dans cette
+   direction, et le test du trois ouvert, dix fois plus cher, n'a pas à être
+   fait. Le filtre ne rate rien : un trois ouvert a forcément trois pions
+   derrière lui. */
+function potentiel(r, c, d, qui){
+  var contre = qui === "IA" ? "P" : "IA", dr = DIRS[d][0], dc = DIRS[d][1];
+  var meilleur = 0, s, k, r0, c0, a, b, v;
+  for (s = -4; s <= 0; s++){
+    r0 = r + dr*s; c0 = c + dc*s;
+    if (!dedans(r0,c0) || !dedans(r0 + dr*4, c0 + dc*4)) continue;
+    a = 0; b = 0;
+    for (k = 0; k < 5; k++){
+      v = plateau[r0 + dr*k][c0 + dc*k];
+      if (v === qui) a++; else if (v === contre) b++;
+    }
+    if (!b && a > meilleur) meilleur = a;
+  }
+  return meilleur;
+}
+
+/* Ce qu'un coup fabrique, les quatre directions réunies.
+   `imparable` : plus rien à faire contre, la partie est jouée au coup suivant.
+   `forcing`   : combien de menaces à traiter. Deux d'un coup = fourchette,
+                 l'adversaire n'en bouche qu'une. */
+function menace(r, c, qui){
+  var comp = complements(r, c, qui), m, d, n;
+  if (comp.length === 1 && comp[0] === -1)
+    return { cinq:true, imparable:true, forcing:4, comp:[] };
+  m = { cinq:false, imparable: comp.length >= 2, forcing:0, comp:comp };
+  plateau[r][c] = qui;
+  for (d = 0; d < 4; d++){
+    if (potentiel(r, c, d, qui) < 3) continue;
+    n = niveauMenace(r, c, d, qui);
+    if (n >= 3) m.forcing++;
+  }
+  plateau[r][c] = "";
+  return m;
+}
+
+/* ─────────────────────────────────────────── le gain par coups forcés ──
+   La technique par laquelle un joueur qui sait jouer démonte un ordinateur
+   qui ne regarde qu'un coup à la fois : enchaîner des QUATRES. À chaque
+   quatre, l'adversaire n'a qu'une seule case pour survivre, donc sa réponse
+   est connue d'avance ; on peut dérouler dix coups sans se tromper et poser
+   le cinq au bout. Peu de coups font un quatre, l'arbre reste donc étroit et
+   la recherche coûte peu.
+   Elle sert des DEUX côtés : la jouer pour gagner, et la chercher chez
+   l'adversaire pour la casser avant qu'elle ne parte. C'est ce dernier point
+   qui rend le niveau difficile pénible : on ne lui prépare plus rien.  */
+function gainForce(qui, profondeur, avecTrois){
+  if (budgetForce-- <= 0) return null;
+  var contre = qui === "IA" ? "P" : "IA";
+  var mes = libresAuContact(1, qui), profils = [], quatres = [], trois = [];
+  var i, q, m, mn, urgence = null, siens, rr, cc, suite, rep, tout;
+
+  /* un cinq tout de suite met fin au débat */
+  for (i = 0; i < mes.length; i++){
+    mn = menace(mes[i].r, mes[i].c, qui);
+    profils.push(mn);
+    if (mn.cinq) return mes[i];
+  }
+  if (profondeur <= 0) return null;
+
+  /* Ses cinq à lui. Deux : c'est perdu, on arrête de chercher. Un : on n'a
+     plus qu'un croisement jouable, et il faut qu'il force encore, sinon on
+     rend la main et la chaîne s'arrête là. */
+  siens = libresAuContact(1, contre);
+  for (i = 0; i < siens.length; i++){
+    if (complements(siens[i].r, siens[i].c, contre)[0] === -1){
+      if (urgence) return null;
+      urgence = siens[i];
+    }
+  }
+
+  if (urgence){
+    mn = menace(urgence.r, urgence.c, qui);
+    if (mn.imparable || mn.forcing >= 2) return urgence;
+    if (mn.comp.length !== 1) return null;
+    quatres.push({ m:urgence, comp:mn.comp });
+  } else {
+    /* Il n'a rien d'immédiat : un quatre ouvert ou une fourchette le tue. */
+    for (i = 0; i < mes.length; i++)
+      if (profils[i].imparable || profils[i].forcing >= 2) return mes[i];
+    for (i = 0; i < mes.length; i++)
+      if (profils[i].comp.length === 1) quatres.push({ m:mes[i], comp:profils[i].comp });
+    /* Les trois ouverts : ils forcent aussi une réponse, mais l'adversaire a
+       le choix de la sienne. On ne les retient que dans le mode large. */
+    if (avecTrois)
+      for (i = 0; i < mes.length; i++)
+        if (!profils[i].comp.length && profils[i].forcing >= 1) trois.push(mes[i]);
+  }
+
+  /* On enchaîne les quatres : à chacun, sa réponse est connue d'avance. */
+  for (q = 0; q < quatres.length; q++){
+    m = quatres[q].m;
+    plateau[m.r][m.c] = qui;
+    rr = (quatres[q].comp[0] / TAILLE) | 0; cc = quatres[q].comp[0] % TAILLE;
+    plateau[rr][cc] = contre;
+    suite = gainForce(qui, profondeur - 1, avecTrois);
+    plateau[rr][cc] = "";
+    plateau[m.r][m.c] = "";
+    if (suite) return m;
+  }
+
+  /* Puis les trois ouverts. Là sa réponse n'est PAS connue : il faut que
+     toutes celles qui tiennent debout perdent quand même. C'est ce qui coûte
+     cher, et c'est aussi ce qui attrape les fourchettes préparées trois coups
+     à l'avance, celles par lesquelles on démontait encore le moteur. */
+  for (q = 0; q < trois.length; q++){
+    m = trois[q];
+    plateau[m.r][m.c] = qui;
+    rep = parades(qui, contre);
+    tout = rep.length > 0;
+    for (i = 0; i < rep.length && tout; i++){
+      plateau[rep[i].r][rep[i].c] = contre;
+      if (!gainForce(qui, profondeur - 1, avecTrois)) tout = false;
+      plateau[rep[i].r][rep[i].c] = "";
+    }
+    plateau[m.r][m.c] = "";
+    if (tout) return m;
+  }
+  return null;
+}
+
+/* Par où l'adversaire peut répondre à une menace qui n'est pas un quatre :
+   soit il occupe le croisement qui nous donnerait le quatre ouvert, soit il
+   pose un quatre à lui et reprend la main. Une liste courte, forcément :
+   c'est elle qui décide du coût de la recherche large. */
+function parades(qui, contre){
+  var libres = libresAuContact(1), res = [], i, c;
+  for (i = 0; i < libres.length && res.length < 8; i++){
+    c = libres[i];
+    if (complements(c.r, c.c, contre).length || menace(c.r, c.c, qui).imparable) res.push(c);
+  }
+  return res;
+}
+
+/* Tous les coups qui remplissent la condition, les mieux classés d'abord. */
+function tousParmi(liste, profils, test){
+  var res = [], i;
+  for (i = 0; i < liste.length; i++) if (test(profils[i])) res.push(liste[i]);
+  return res;
 }
 
 function choisirCoup(){
   var n = NIVEAUX[$("#difficulte").value] || NIVEAUX.moyenne;
-  var liste = candidats(14, 2), i, m, notes = [], v;
+  /* TOUS les croisements jouables, les meilleurs d'abord. On ne coupe la liste
+     que pour le calcul en profondeur, jamais pour chercher une victoire, une
+     défaite ou une menace : celles-là se cachent volontiers au 40e rang d'un
+     classement approximatif, et une parade qu'on ne regarde pas est une
+     parade qu'on ne joue pas. C'est comme ça qu'on perdait une diagonale. */
+  var liste = candidats(1e9, 2), i, j, m, notes = [], v;
   if (!liste.length) return null;
 
   /* garde-fou commun aux trois niveaux : on gagne si on peut, on bloque sinon */
@@ -535,28 +848,128 @@ function choisirCoup(){
   }
   for (i = 0; i < liste.length; i++){
     m = liste[i]; plateau[m.r][m.c] = "P"; v = gagne(m.r,m.c,"P"); plateau[m.r][m.c] = "";
-    if (v) return m;
+    if (!v) continue;
+    /* Le niveau facile ne bouche pas un cinq si le boucher lui met entre les
+       mains une menace qu'il n'est pas censé avoir : il n'est pas là pour
+       gagner par accident. Il laisse passer et il perd, c'est sa raison
+       d'être. Le cas est rare, une partie sur douze. */
+    if (n.bride && complements(m.r, m.c, "IA").length >= n.bride) continue;
+    return m;
   }
 
-  /* Le niveau difficile joue la double menace, et surtout il l'ÉTOUFFE chez
-     l'adversaire avant qu'elle n'existe. C'est ce qui le rend pénible : on ne
-     peut plus lui préparer un piège tranquillement. */
+  /* Le niveau facile s'arrête ici. Il ne calcule rien : il pose près de
+     l'action, en piochant parmi les meilleurs croisements sans chercher
+     lequel est LE bon. Il gagne si on lui laisse un cinq, et il bouche un cinq
+     tant que le boucher ne lui met pas un quatre entre les mains : les deux
+     garde-fous ci-dessus s'en chargent. Au-delà il ne joue pas pour gagner,
+     il joue pour qu'on ait quelqu'un en face.
+     Deux réglages, et rien d'autre :
+       `mou`   la largeur dans laquelle il pioche au hasard. Plus c'est large,
+               plus il est dispersé.
+       `bride` à partir de combien de croisements gagnants il s'abstient.
+               2 : il refuse le quatre ouvert et le double quatre, les deux
+               formes auxquelles on ne peut plus rien. 1 : il refuse même le
+               quatre simple, il ne peut donc plus conclure du tout. Sans ce
+               frein il gagnait une partie sur deux contre un débutant, en
+               accumulant par hasard, ce qui n'est pas un niveau « facile ». */
+  if (n.mou){
+    /* On reclasse pour LUI seul. `liste` est triée sur la valeur des deux
+       camps réunis, donc ses premiers croisements sont aussi ceux que
+       l'adversaire convoite : en piochant dedans, le niveau facile bouchait
+       le joueur sans le vouloir et gagnait une partie sur deux. Ici il ne
+       regarde que son propre jeu, comme un débutant. */
+    var sien = [], compte = [], mini = 99, seuil;
+    for (j = 0; j < liste.length; j++){
+      compte[j] = complements(liste[j].r, liste[j].c, "IA").length;
+      if (compte[j] < mini) mini = compte[j];
+    }
+    /* Le seuil de ce qu'il s'interdit. Il descend d'un cran quand le plateau
+       ne lui laisse plus rien de sage, mais il ne disparaît jamais : lever le
+       frein dans ces cas-là lui redonnait le droit de conclure, et c'est par
+       là qu'il gagnait encore une partie sur douze. */
+    seuil = n.bride ? Math.max(n.bride, mini + 1) : 99;
+    for (j = 0; j < liste.length; j++){
+      if (compte[j] >= seuil) continue;
+      liste[j].moi = evaluerCoup(liste[j].r, liste[j].c, "IA");
+      sien.push(liste[j]);
+    }
+    sien.sort(function(a,b){ return b.moi - a.moi; });
+    var pioche = sien.slice(0, n.mou);
+    return pioche[Math.floor(Math.random() * pioche.length)];
+  }
+
+  /* Le niveau difficile déroule l'échelle des menaces, dans cet ordre exact ;
+     l'ordre EST la force, en inverser deux suffit à redevenir battable.
+     Mais l'échelle ne CHOISIT pas le coup : elle dit lesquels restent
+     jouables, et c'est le calcul qui tranche entre eux. Boucher un trois
+     ouvert par un bout ou par l'autre, ce n'est pas le même sort six coups
+     plus loin : c'est précisément par ce mauvais bout qu'on perdait. */
+  var forces = null;
   if (n.menaces){
+    var moi = [], lui = [];
     for (i = 0; i < liste.length; i++){
-      m = liste[i];
-      if (menacesCreees(m.r, m.c, "IA") >= 2) return m;
+      moi.push(menace(liste[i].r, liste[i].c, "IA"));
+      lui.push(menace(liste[i].r, liste[i].c, "P"));
     }
-    var danger = null, pire = 1;
-    for (i = 0; i < liste.length; i++){
-      m = liste[i];
-      v = menacesCreees(m.r, m.c, "P");
-      if (v > pire){ pire = v; danger = m; }
+    var imparable = function(x){ return x.imparable; };
+    var fourchette = function(x){ return x.forcing >= 2; };
+    /* 1. quatre ouvert ou double quatre à moi : c'est fini au coup suivant,
+          il n'a pas de cinq en réserve, on l'a vérifié plus haut. */
+    var gagnants = tousParmi(liste, moi, imparable);
+    if (gagnants.length) return gagnants[0];
+    /* 2. le même coup chez lui, occupé avant qu'il le pose. C'est AUSSI la
+          réponse au trois ouvert : le croisement qui lui donnerait le quatre
+          ouvert est exactement celui qu'il faut prendre. */
+    forces = tousParmi(liste, lui, imparable);
+    /* 3. mon gain par quatres forcés : ce n'est pas une intuition, c'est une
+          victoire démontrée jusqu'au cinq. */
+    if (!forces.length && (m = chercherGain("IA"))) return m;
+    /* 4. ma fourchette : deux menaces d'un coup, il n'en bouche qu'une */
+    if (!forces.length) forces = tousParmi(liste, moi, fourchette);
+    /* 5 et 6. SES suites gagnantes à lui, les deux sortes : celle qui
+          n'enchaîne que des quatres, et celle qui passe par des trois ouverts
+          pour aboutir à une fourchette trois coups plus loin. On ne garde que
+          les coups qui les cassent TOUTES LES DEUX. Les traiter l'une après
+          l'autre, en s'arrêtant à la première, revenait à parer un couteau en
+          ignorant l'autre : le moteur bouchait le gain par quatres et se
+          faisait prendre par la fourchette au coup suivant. */
+    var sur = liste.slice(0, LARGEUR_RACINE), restreint = false, garde;
+    if (!forces.length && chercherGain("P")){
+      garde = [];
+      for (i = 0; i < sur.length; i++){
+        m = sur[i]; plateau[m.r][m.c] = "IA";
+        if (!chercherGain("P")) garde.push(m);
+        plateau[m.r][m.c] = "";
+      }
+      restreint = true;
+      if (garde.length) sur = garde;      /* aucun ne casse : c'est perdu, on joue au mieux */
     }
-    if (danger) return danger;
+    if (!forces.length && chercherMenace("P")){
+      garde = [];
+      for (i = 0; i < sur.length; i++){
+        m = sur[i]; plateau[m.r][m.c] = "IA";
+        if (!chercherMenace("P")) garde.push(m);
+        plateau[m.r][m.c] = "";
+      }
+      restreint = true;
+      if (garde.length) sur = garde;
+    }
+    if (!forces.length && restreint) forces = sur;
+    /* 7. sa fourchette immédiate, si la recherche large n'a rien vu */
+    if (!forces.length) forces = tousParmi(liste, lui, fourchette);
+    /* 8. rien à parer : on cherche alors SA propre suite gagnante. Elle est
+          approchée, donc elle ne passe jamais devant la défense ; mais dans
+          une position calme, le coup qu'elle désigne vaut mieux qu'un coup
+          tiède sorti du calcul. */
+    if (!forces.length && ATTAQUE_LARGE && (m = chercherMenace("IA"))) return m;
+    forces = forces.length ? forces.slice(0, LARGEUR_RACINE) : null;
   }
 
-  for (i = 0; i < liste.length; i++){
-    m = liste[i];
+  /* Position calme : on repasse au calcul, sur le haut du panier seulement.
+     Position forcée : on calcule les seules réponses qui tiennent. */
+  var aCalculer = forces || liste.slice(0, LARGEUR_RACINE);
+  for (i = 0; i < aCalculer.length; i++){
+    m = aCalculer[i];
     if (n.profondeur){
       plateau[m.r][m.c] = "IA";
       v = minimax(n.profondeur - 1, -Infinity, Infinity, false, n.defense);
@@ -567,7 +980,8 @@ function choisirCoup(){
     notes.push({ m:m, v:v });
   }
   notes.sort(function(a,b){ return b.v - a.v; });
-  var k = Math.min(n.hesitation, notes.length);
+  /* Sur une position forcée, aucune fantaisie : le meilleur, et rien d'autre. */
+  var k = forces ? 1 : Math.min(n.hesitation, notes.length);
   return notes[Math.floor(Math.random() * k)].m;
 }
 
