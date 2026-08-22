@@ -169,10 +169,10 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
     <label>Mode
       <select id="mode">
         <option value="ordinateur" selected>Contre l'ordinateur</option>
-        <option value="duo">À deux (même écran)</option>
+        <option value="distance">À distance (par lien)</option>
       </select>
     </label>
-    <label id="etiquette-difficulte">Difficulté
+    <label>Difficulté
       <select id="difficulte">
         <option value="facile">Facile</option>
         <option value="moyenne" selected>Moyenne</option>
@@ -202,7 +202,8 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
   <p class="regle"><b>Règle :</b> pose ta marque sur un croisement de la grille (15 × 15) et
   aligne <b>5 marques</b> à l'horizontale, à la verticale ou en diagonale avant
   l'adversaire. Les <b>points rouges</b> ouvrent, les <b>croix jaunes</b> répondent.
-  À deux, on joue chacun son tour sur le même écran. Quand le temps tombe, le logo
+  Pour jouer à deux, chacun sur son téléphone, choisis
+  « à distance » dans le menu. Quand le temps tombe, le logo
   clignote.</p>
 
 </div>
@@ -296,15 +297,19 @@ var STOCKAGE = "ti-point-ti-croix/v1";
 
    MOYENNE ne calcule pas à l'avance (profondeur 0) : il lit bien la position
    du moment, mais il ne voit pas le coup d'après, et il hésite entre ses trois
-   meilleurs coups. C'est de là que vient sa faille, et c'est voulu. Avec le
-   calcul à deux coups qu'il avait, il devenait imbattable : un joueur solide
-   ne lui prenait que 3 parties sur 48.
+   meilleurs coups. Ce qu'il ne rate jamais, en revanche, c'est le croisement
+   qui donnerait à l'adversaire un quatre ouvert ou une fourchette : c'est le
+   rôle de `garde`, et c'est ce qui interdit de le battre en alignant cinq
+   pions tout droit. Sans lui on le pliait en six coups ; avec lui, il en faut
+   au moins quinze, parce qu'il faut construire une fourchette en plusieurs
+   temps. Ce qui lui manque toujours, et par où on le bat : il ne voit ni les
+   gains forcés ni ce qui se prépare deux coups plus loin.
 
    Les modifier au jugé casse les promesses affichées dans le menu ;
    test_moteur.js les vérifie une par une. */
 var NIVEAUX = {
   facile:    { mou: 12, bride: 1 },
-  moyenne:   { profondeur: 0, defense: 1.00, hesitation: 3, menaces: false },
+  moyenne:   { profondeur: 0, defense: 1.00, hesitation: 3, menaces: false, garde: 2 },
   difficile: { profondeur: 6, defense: 1.00, hesitation: 1, menaces: true  }
 };
 
@@ -364,7 +369,7 @@ var COTE = MARGE * 2 + (TAILLE - 1) * PAS;
 
 /* `tour` dit QUI doit poser sa marque, "P" (les points) ou "IA" (les croix).
    `humain` dit si ce tour attend un doigt : faux seulement quand l'ordinateur
-   réfléchit. À deux sur le même écran, il est vrai à chaque tour. */
+   réfléchit. */
 var plateau, fini, tour, humain, minuteur, restant, dernierCoup;
 var etat = charger();
 
@@ -898,6 +903,41 @@ function choisirCoup(){
     return pioche[Math.floor(Math.random() * pioche.length)];
   }
 
+  /* Le niveau moyen ne déroule pas l'échelle des menaces, mais il refuse de se
+     faire aligner cinq pions sous le nez : il occupe le croisement qui
+     donnerait à l'adversaire un quatre ouvert, autrement dit il répond à un
+     trois ouvert. C'est la seule chose qui sépare « on le bat en six coups en
+     ligne droite » de « il faut lui fabriquer une fourchette ». Il ne voit
+     toujours ni les fourchettes ni les gains forcés, et c'est bien par là
+     qu'on doit le battre : ça demande de construire, donc des coups. */
+  if (n.garde){
+    var vus = [];
+    for (i = 0; i < liste.length; i++){
+      vus[i] = menace(liste[i].r, liste[i].c, "P");
+      if (vus[i].imparable) return liste[i];        /* son quatre ouvert : jamais */
+    }
+    /* garde 2 : il étouffe aussi la fourchette, les deux menaces d'un coup.
+       Il ne reste alors qu'une façon de le battre, la construire en plusieurs
+       temps, et ça ne se fait pas en cinq coups. */
+    if (n.garde >= 2)
+      for (i = 0; i < liste.length; i++)
+        if (vus[i].forcing >= 2) return liste[i];
+    /* garde 3 : il casse en plus son gain par quatres forcés. À ce stade il ne
+       reste plus qu'à lui construire une fourchette en plusieurs temps, et ça
+       prend une quinzaine de coups. Il DÉFEND comme un bon joueur, mais il
+       n'attaque toujours pas : c'est ce déséquilibre qui fait le niveau du
+       milieu, long à battre mais battable. */
+    if (n.garde >= 3 && chercherGain("P")){
+      for (i = 0; i < liste.length && i < LARGEUR_RACINE; i++){
+        m = liste[i];
+        plateau[m.r][m.c] = "IA";
+        var tient = !chercherGain("P");
+        plateau[m.r][m.c] = "";
+        if (tient) return m;
+      }
+    }
+  }
+
   /* Le niveau difficile déroule l'échelle des menaces, dans cet ordre exact ;
      l'ordre EST la force, en inverser deux suffit à redevenir battable.
      Mais l'échelle ne CHOISIT pas le coup : elle dit lesquels restent
@@ -987,15 +1027,7 @@ function choisirCoup(){
 
 /* ──────────────────────────────────────────────────────── les tours ── */
 
-function duo(){ return $("#mode").value === "duo"; }
-
-function annonce(){
-  if (duo()) return tour === "P" ? "🔴 Aux points de jouer" : "🟡 Aux croix de jouer";
-  return "À toi de jouer";
-}
-
 function victoire(qui){
-  if (duo()) return qui === "P" ? "🔴 Les points gagnent !" : "🟡 Les croix gagnent !";
   return qui === "P" ? "🎉 Bravo, tu as gagné !" : "😈 L'ordinateur a gagné";
 }
 
@@ -1018,19 +1050,19 @@ function jouer(r,c,qui){
 
   tour = qui === "P" ? "IA" : "P";
 
-  if (!duo() && tour === "IA"){
+  if (tour === "IA"){
     humain = false;
     $("#etat").textContent = "L'ordinateur réfléchit…";
     setTimeout(coupOrdinateur, 320);
     return;
   }
   humain = true;
-  $("#etat").textContent = annonce();
+  $("#etat").textContent = "À toi de jouer";
   lancerChrono();
 }
 
 function coupOrdinateur(){
-  if (fini || duo()) return;
+  if (fini) return;
   var m = choisirCoup();
   if (!m) return terminer("🤝 Match nul");
   jouer(m.r, m.c, "IA");
@@ -1060,17 +1092,8 @@ function lancerChrono(){
     if (restant <= 0){
       arreterChrono();
       $("#etat").textContent = "⏰ Temps écoulé";
-      if (duo()){
-        tour = tour === "P" ? "IA" : "P";
-        setTimeout(function(){
-          if (fini) return;
-          $("#etat").textContent = annonce();
-          lancerChrono();
-        }, 1000);
-      } else {
-        humain = false;
-        setTimeout(coupOrdinateur, 500);
-      }
+      humain = false;
+      setTimeout(coupOrdinateur, 500);
     }
   }, 1000);
 }
@@ -1124,8 +1147,7 @@ function nouvellePartie(){
   fini = false; tour = "P"; humain = true; dernierCoup = null;
   var m = $("#marques");
   while (m.firstChild) m.removeChild(m.firstChild);
-  $("#etiquette-difficulte").hidden = duo();   /* à deux, le niveau ne veut plus rien dire */
-  $("#etat").textContent = annonce();
+  $("#etat").textContent = "À toi de jouer";
   lancerChrono();
 }
 
@@ -1141,7 +1163,18 @@ function demarrer(){
   $("#rejouer").addEventListener("click", rejouer);
   $("#voile-fermer").addEventListener("click", fermerFormulaire);
   $("#duree").addEventListener("change", function(){ if (!fini && humain) lancerChrono(); });
-  $("#mode").addEventListener("change", nouvellePartie);   /* changer de mode rebat les cartes */
+  /* Le mode « à distance » n'est pas un mode de CETTE page : c'est l'autre
+     page, celle où l'on joue à deux par lien interposé. Le menu y conduit,
+     puis se remet sur « contre l'ordinateur » pour que le retour en arrière
+     du navigateur retrouve un menu cohérent. */
+  $("#mode").addEventListener("change", function(){
+    if ($("#mode").value === "distance"){
+      $("#mode").value = "ordinateur";
+      location.href = "a-distance.html";
+      return;
+    }
+    nouvellePartie();                                      /* changer de mode rebat les cartes */
+  });
   document.addEventListener("keydown", function(e){ if (e.key === "Escape") fermerFormulaire(); });
 
   /* Tally prévient la page quand le formulaire est envoyé : on laisse son
