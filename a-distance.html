@@ -248,7 +248,26 @@ var plateau, fini, gagnant, aJoue = false;
    fois n'est plus sollicité nulle part. On ne harcèle personne. */
 var TALLY = "1AQxXb";
 var STOCKAGE = "ti-point-ti-croix/v1";
+
+/* ═══════════════════════ LES COORDONNEES NE SE REDEMANDENT JAMAIS ══════
+   Posé par Pierre le 03/09/2026. Les trois jeux de L'SQz vivent sur la MEME
+   adresse, lsqz971.github.io : leur memoire de navigateur est donc commune.
+   Qui a donne ses coordonnees dans un jeu les a donnees pour tous, et le
+   formulaire ne doit plus reparaitre ailleurs. Chaque jeu avait jusqu'ici
+   son propre repere, si bien qu'une personne deja inscrite se voyait
+   redemander son numero trois fois pour trois jeux.
+   Le repere se pose a l'ENVOI du formulaire, jamais a son ouverture :
+   fermer sans repondre ne compte pas, et le formulaire reviendra. */
+var LSQZ_INSCRIT = "lsqz-coordonnees-donnees";
+function dejaInscrit(){
+  try { return localStorage.getItem(LSQZ_INSCRIT) === "1"; } catch (e) { return false; }
+}
+function noterInscrit(){
+  try { localStorage.setItem(LSQZ_INSCRIT, "1"); } catch (e) {}
+}
+
 var etat = charger();
+if (dejaInscrit()) etat.forme = true;      /* il a répondu ailleurs : on se tait */
 var apresFormulaire = null;      /* ce qu'on fait une fois le voile refermé */
 
 function charger(){
@@ -588,7 +607,7 @@ function demarrer(){
   window.addEventListener("message", function(e){
     if (e.origin !== "https://tally.so") return;
     if (typeof e.data !== "string" || e.data.indexOf("Tally.FormSubmitted") === -1) return;
-    etat.forme = true; sauver();
+    etat.forme = true; noterInscrit(); sauver();
     setTimeout(fermerFormulaire, 1600);
   });
   $("#nouvelle").addEventListener("click", function(){
