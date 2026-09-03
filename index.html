@@ -150,6 +150,137 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
   .reglages{ gap:7px; }
 }
 
+/* ══════════════════════════════════ LES TABLES EN LIGNE ══════════════════
+   Ajouté le 03/09/2026. Le salon, l'invitation et le tchat sont repris de
+   la table de domino, à l'identique dans leur comportement : un joueur qui
+   passe d'un jeu à l'autre retrouve les mêmes gestes au même endroit. */
+.salon{
+  position:fixed;inset:0;z-index:12;display:grid;place-items:center;
+  padding:var(--pas);background:rgba(6,32,17,.94);overflow:auto;
+}
+.salon__boite{
+  width:100%;max-width:430px;display:flex;flex-direction:column;gap:12px;
+  background:#0E3D22;border:1px solid rgba(255,255,255,.14);
+  border-radius:14px;padding:16px;
+}
+.salon h2{font-size:18px;margin:0}
+.salon h3{font-size:14px;margin:4px 0 0;color:var(--encre-2)}
+.salon__nom{display:flex;flex-direction:column;gap:4px;font-size:13px;text-align:left}
+.salon__nom input{
+  font:inherit;font-size:15px;padding:9px 10px;border-radius:9px;
+  border:1px solid rgba(255,255,255,.20);background:rgba(0,0,0,.24);color:#fff;
+}
+.salon__nom input.manque{border-color:#E5674F;background:rgba(229,103,79,.14)}
+.salon__note-nom{font-size:11px;color:var(--encre-2)}
+.salon__ouvrir{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.salon__ouvrir label{display:flex;flex-direction:column;gap:4px;font-size:13px;flex:1;min-width:130px;text-align:left}
+.salon__convie{
+  display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:10px;
+  background:rgba(255,214,102,.14);border:1px solid rgba(255,214,102,.34);font-size:13px;
+}
+.salon__ligne{
+  display:flex;align-items:center;gap:8px;padding:7px 9px;font-size:13px;
+  border-radius:9px;background:rgba(0,0,0,.22);margin-top:6px;text-align:left;
+}
+.salon__ligne span:first-child{flex:1;min-width:0}
+.salon__places{color:var(--encre-2);font-size:12px;white-space:nowrap}
+.salon__note{font-size:12px;color:var(--encre-2);line-height:1.45;margin:6px 0 0;text-align:left}
+
+.invite{
+  margin:8px auto 0;max-width:430px;padding:10px 12px;
+  border-radius:12px;background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.14);
+}
+.invite__titre{margin:0 0 8px;font-size:14px;font-weight:700}
+.invite__wa{
+  display:block;text-align:center;padding:10px 14px;border-radius:10px;
+  background:#25D366;color:#06341A;font-weight:700;text-decoration:none;font-size:14px;
+}
+.invite__lien{display:flex;gap:6px;margin-top:8px}
+.invite__lien input{
+  flex:1;min-width:0;font:inherit;font-size:12px;padding:8px;border-radius:8px;
+  border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.26);color:#fff;
+}
+.invite__note{margin:7px 0 0;font-size:11px;color:var(--encre-2);line-height:1.4}
+
+.score{font-size:13px;color:var(--encre-2);margin:8px 0 0;display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.score b{color:#fff}
+.score .cochon{color:#FFD666;font-weight:700}
+
+/* Le tchat, posé SUR le tapis, en bas à droite. Relevé chez Ludicash le
+   03/09/2026 : une seule ligne de saisie, fond translucide, et il se replie. */
+.tchat{
+  position:absolute;right:14px;bottom:14px;z-index:8;
+  width:min(60vw,190px);display:flex;flex-direction:column;
+  border-radius:10px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.45);
+}
+.tchat__titre{
+  font:inherit;font-size:11px;font-weight:700;letter-spacing:.02em;
+  display:flex;align-items:center;justify-content:center;gap:5px;
+  padding:4px 8px;border:0;cursor:pointer;background:#0B4A63;color:#fff;
+}
+.tchat__chevron{
+  width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;
+  border-top:5px solid rgba(255,255,255,.85);
+}
+.tchat__fil{
+  height:132px;overflow-y:auto;padding:4px 5px;
+  background:rgba(10,30,18,.72);box-shadow:inset 0 0 2px rgba(0,0,0,.9);
+  font-size:11px;line-height:1.35;color:#E8EDE6;text-align:left;
+}
+.tchat__nom{font-size:9px;color:#9FB8A4;margin:3px 4px 1px}
+.tchat__bloc{display:flex;margin:1px 0}
+.tchat__bloc--moi{justify-content:flex-end}
+.tchat__mot{
+  display:inline-block;max-width:82%;min-width:22%;padding:3px 6px;border-radius:7px;
+  background:rgba(0,0,0,.34);overflow-wrap:break-word;
+}
+.tchat__mot--moi{background:#166B10;color:#fff}
+.tchat__vide{color:#9FB8A4;font-size:10px;text-align:center;padding:8px 4px}
+.tchat__barre{display:flex;align-items:center;position:relative;background:rgba(10,30,18,.86)}
+.tchat__champ{
+  flex:1;min-width:0;height:26px;font:inherit;font-size:12px;padding:0 4px 0 26px;
+  border:0;background:transparent;color:#E8EDE6;outline:none;
+}
+.tchat__emoji{
+  position:absolute;left:2px;top:0;bottom:0;width:24px;font-size:15px;line-height:1;
+  border:0;background:transparent;color:#FFD86B;cursor:pointer;padding:0;box-shadow:none;
+}
+.tchat__envoi{
+  width:26px;height:26px;flex:none;font-size:19px;line-height:1;border:0;
+  background:transparent;color:#7FD08A;cursor:pointer;padding:0 0 2px;box-shadow:none;
+}
+.tchat__palette{
+  position:absolute;left:0;right:0;bottom:26px;display:flex;flex-wrap:wrap;gap:2px;padding:5px;
+  background:rgba(8,22,13,.97);box-shadow:0 -2px 8px rgba(0,0,0,.5);
+}
+.tchat__palette button{
+  font-size:17px;line-height:1;width:28px;height:28px;border:0;background:transparent;
+  cursor:pointer;padding:0;box-shadow:none;
+}
+.tchat__bulle{
+  position:absolute;right:14px;bottom:14px;z-index:8;width:38px;height:38px;border-radius:50%;
+  border:1px solid rgba(255,255,255,.22);background:rgba(11,74,99,.92);cursor:pointer;padding:0;
+}
+.tchat__bulle::before{
+  content:"";position:absolute;left:9px;top:11px;width:20px;height:13px;border-radius:6px;background:#fff;
+}
+.tchat__bulle::after{
+  content:"";position:absolute;left:13px;top:22px;border-left:5px solid #fff;border-bottom:6px solid transparent;
+}
+.tchat__pastille{
+  position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;border-radius:9px;
+  background:#D8362A;color:#fff;font-size:10px;font-weight:700;line-height:17px;
+  text-align:center;padding:0 3px;
+}
+@media (max-height:560px){
+  .tchat{right:8px;bottom:8px;width:min(52vw,168px)}
+  .tchat__fil{height:74px}
+  .tchat__bulle{right:8px;bottom:8px;width:32px;height:32px}
+  .tchat__bulle::before{left:7px;top:9px;width:18px;height:11px}
+  .tchat__bulle::after{left:11px;top:18px}
+}
+
 /* ── le voile du formulaire ───────────────────────────────────────────── */
 .voile{
   position:fixed;inset:0;z-index:10;display:grid;place-items:center;
@@ -175,6 +306,7 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
     <label>Mode
       <select id="mode">
         <option value="ordinateur" selected>Contre l'ordinateur</option>
+        <option value="ligne">Contre des joueurs en ligne</option>
         <option value="distance">À distance (par lien)</option>
       </select>
     </label>
@@ -195,10 +327,23 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
       </select>
     </label>
     <button id="rejouer" type="button">Rejouer</button>
+    <button id="quitter" type="button" hidden>Quitter la table</button>
     <!-- LA VICTOIRE SE MONTRE. C'est le moteur du jeu : une partie gagnée
          qu'on affiche en statut WhatsApp emmène le lien avec elle. Il ne
          s'affiche qu'après une vraie victoire, jamais avant. -->
     <button class="partager" id="partager" type="button" hidden>Partager ma victoire</button>
+  </div>
+
+  <!-- INVITER, AU-DESSUS DE LA GRILLE. Au moment où l'on ouvre une table, on
+       cherche d'abord comment convier quelqu'un, pas où poser sa marque. -->
+  <div class="invite" id="invite" hidden>
+    <p class="invite__titre">Ta table est ouverte. Invite qui tu veux.</p>
+    <a class="invite__wa" id="invite-wa" target="_blank" rel="noopener">Envoyer l'invitation sur WhatsApp</a>
+    <div class="invite__lien">
+      <input id="invite-url" type="text" readonly aria-label="Le lien de ta table">
+      <button id="invite-copier" type="button">Copier</button>
+    </div>
+    <p class="invite__note">Qui ouvre ce lien tombe directement à ta table. Il n'a qu'à dire son nom.</p>
   </div>
 
   <div class="etat" id="etat">À toi de jouer</div>
@@ -207,7 +352,29 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
   <div class="tapis">
     <div class="filigrane" id="filigrane"></div>
     <svg class="grille" id="grille" xmlns="http://www.w3.org/2000/svg" role="grid" aria-label="Grille de jeu"></svg>
+
+    <!-- LE TCHAT DE TABLE, le même qu'au domino : posé sur le tapis en bas à
+         droite, il ne pousse jamais la grille, il passe dessus, et il se
+         replie d'un doigt. -->
+    <div class="tchat" id="tchat" hidden>
+      <button class="tchat__titre" id="tchat-replier" type="button" aria-label="Replier le tchat">
+        Tchat de table<span class="tchat__chevron" aria-hidden="true"></span>
+      </button>
+      <div class="tchat__fil" id="tchat-fil" role="log" aria-live="polite"></div>
+      <form class="tchat__barre" id="tchat-barre" autocomplete="off">
+        <button class="tchat__emoji" id="tchat-emoji" type="button" aria-label="Ajouter une frimousse">☺</button>
+        <input class="tchat__champ" id="tchat-champ" type="text" maxlength="100"
+               enterkeyhint="send" aria-label="Ce que tu dis à la table">
+        <button class="tchat__envoi" id="tchat-envoi" type="submit" aria-label="Envoyer">›</button>
+      </form>
+      <div class="tchat__palette" id="tchat-palette" hidden></div>
+    </div>
+    <button class="tchat__bulle" id="tchat-bulle" type="button" hidden aria-label="Ouvrir le tchat de table">
+      <span class="tchat__pastille" id="tchat-pastille" hidden>0</span>
+    </button>
   </div>
+
+  <div class="score" id="score"></div>
 
   <p class="regle"><b>Règle :</b> pose ta marque sur un croisement de la grille (15 × 15) et
   aligne <b>5 marques</b> à l'horizontale, à la verticale ou en diagonale avant
@@ -216,6 +383,39 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
   « à distance » dans le menu. Quand le temps tombe, le logo
   clignote.</p>
 
+</div>
+
+<div class="salon" id="salon" hidden role="dialog" aria-modal="true" aria-label="Les tables en ligne">
+  <div class="salon__boite">
+    <h2>Jouer contre des joueurs en ligne</h2>
+
+    <label class="salon__nom">Ton nom à la table
+      <input id="salon-nom" type="text" maxlength="18" placeholder="Ton prénom" autocomplete="off"
+             required aria-required="true">
+      <span class="salon__note-nom" id="salon-nom-note">L'autre joueur le verra.</span>
+    </label>
+
+    <div class="salon__ouvrir">
+      <label>Match
+        <select id="salon-donnes">
+          <option value="3" selected>En 3 manches</option>
+          <option value="5">En 5 manches</option>
+        </select>
+      </label>
+      <button id="salon-ouvrir" type="button">Ouvrir une table</button>
+    </div>
+
+    <div class="salon__convie" id="salon-convie" hidden>
+      <b>On t'attend à une table.</b>
+      <span>Dis ton nom et assieds-toi.</span>
+      <button id="salon-convie-ok" type="button">Rejoindre la table</button>
+    </div>
+
+    <h3>Les tables ouvertes</h3>
+    <div id="salon-tables"></div>
+
+    <button class="bouton--pale" id="salon-fermer" type="button">Revenir à ma partie</button>
+  </div>
 </div>
 
 <div class="voile" id="voile" hidden role="dialog" aria-modal="true" aria-label="L'SQz">
@@ -1087,6 +1287,17 @@ function victoire(qui){
 }
 
 function coupJoueur(r,c){
+  /* EN LIGNE, C'EST L'ARBITRE QUI POSE. On ne touche pas à la grille de son
+     côté : on demande, et l'on redessine sur ce qu'il répond. C'est la seule
+     façon que les deux écrans disent la même chose. */
+  if (enLigne()){
+    var vue = LIGNE.vue();
+    if (!vue || !vue.aMoi || vue.fini) return;
+    if (vue.grille && vue.grille[r][c]) return;
+    if (!lienVivant()){ dire("Connexion perdue. On te remet à ta place…"); return; }
+    envoyerEnLigne({ t: "jouer", r: r, c: c });
+    return;
+  }
   if (fini || !humain || plateau[r][c] !== "") return;
   jouer(r, c, tour);
 }
@@ -1150,14 +1361,28 @@ function adressePublique(){
 /* Le nombre de coups posés dit la difficulté de la partie mieux qu'un
    adjectif : « en 9 coups » se comprend sans rien expliquer. */
 function mesCoups(){
+  /* MON CAMP N'EST PAS TOUJOURS « P ». Contre l'ordinateur, je suis les
+     points ; en ligne, l'arbitre m'assoit d'un côté ou de l'autre, et compter
+     les points annoncerait les coups de l'adversaire. */
+  var vue = enLigne() ? LIGNE.vue() : null;
+  var moi = (vue && vue.monCamp) ? vue.monCamp : "P";
   var n = 0;
   for (var r = 0; r < TAILLE; r++) for (var c = 0; c < TAILLE; c++){
-    if (plateau[r][c] === "P") n++;
+    if (plateau[r][c] === moi) n++;
   }
   return n;
 }
 
 function texteDeVictoire(){
+  /* EN LIGNE, ON N'A PAS BATTU UN NIVEAU, ON A BATTU QUELQU'UN. Annoncer
+     « en moyenne » après avoir gagné contre une personne serait faux, et
+     c'est bien moins beau à lire que son nom. */
+  var vueL = enLigne() ? LIGNE.vue() : null;
+  if (vueL){
+    var adverse = nomDeLaPlace(vueL.monSiege === 0 ? 1 : 0);
+    return "J'ai battu " + adverse + " à Ti Point Ti Croix : cinq marques alignées en " +
+           mesCoups() + " coups.\n\nÀ toi de jouer : " + adressePublique();
+  }
   var niveau = $("#difficulte").value;
   var nom = niveau === "difficile" ? "en difficile"
           : niveau === "facile"    ? "en facile"
@@ -1253,7 +1478,447 @@ function fermerFormulaire(){
 
 /* ──────────────────────────────────────────────────────── la partie ── */
 
+/* ═══════════════════════════════════════════════════════════════════════
+   LA TABLE EN LIGNE
+   Écrite le 03/09/2026 sur ordre de Pierre, sur le modèle de la table de
+   domino du 29/08. SECOND Worker, séparé de celui du domino : le domino
+   tourne en production, un besoin nouveau ouvre un dispositif nouveau.
+
+   Ce jeu ne cache rien, contrairement au domino : l'arbitre ne sert donc pas
+   à garder un secret, il sert à ce que les deux joueurs voient la MÊME grille
+   au même instant et qu'aucun ne joue à la place de l'autre.
+
+   Le mode « à distance par lien » reste, et ce n'est pas un doublon : il est
+   ASYNCHRONE, on joue quand on veut, chacun renvoyant le lien. Celui-ci est
+   synchrone, avec un salon, un sablier et un tchat.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Adresse du serveur. Vide tant que le Worker n'est pas déployé : le bouton
+   « en ligne » le dit alors franchement au lieu de tourner dans le vide.
+   Une fois `npx wrangler deploy` lancé dans serveur/, coller l'adresse ici. */
+var SERVEUR = "https://lsqz-morpion.domino-lsqz-serveur.workers.dev";
+
+var ADRESSE_JEU = "https://lsqz971.github.io/ti-point-ti-croix/";
+var ligne = null;                /* { ws, monSiege, vue, id, nom, parti } */
+var essais = 0, rappel = null, sablier = null;
+
+function enLigne(){ return !!ligne; }
+function lienVivant(){
+  if (!ligne) return true;
+  return !!(ligne.ws && ligne.ws.readyState === 1);
+}
+
+if (typeof window !== "undefined"){
+  window.LIGNE = { etat: function(){ return ligne; }, vue: function(){ return ligne ? ligne.vue : null; } };
+}
+
+/* ─────────────────────────────────────────────────────────── le salon ── */
+
+function ouvrirSalon(){
+  $("#salon").hidden = false;
+  listerTables();
+}
+function fermerSalon(){ $("#salon").hidden = true; }
+
+function listerTables(){
+  var liste = $("#salon-tables");
+  if (!SERVEUR){
+    liste.innerHTML = '<p class="salon__note">Le serveur des tables en ligne n\'est pas ' +
+      'encore en service. En attendant, « à distance (par lien) » permet déjà de jouer ' +
+      'à deux, chacun sur son téléphone, en se renvoyant le lien par WhatsApp.</p>';
+    return;
+  }
+  liste.innerHTML = '<p class="salon__note">Recherche des tables ouvertes…</p>';
+  fetch(SERVEUR + "/salon").then(function(r){ return r.json(); }).then(function(d){
+    var t = d.tables || [];
+    if (!t.length){ liste.innerHTML = '<p class="salon__note">Aucune table ouverte. Ouvre la tienne.</p>'; return; }
+    var html = "";
+    for (var i = 0; i < t.length; i++){
+      var enN = (t[i].donnesMax === 5) ? " en 5 manches" : " en 3 manches";
+      html += '<div class="salon__ligne"><span><b>' + t[i].table + '</b>' + enN +
+        (t[i].assis && t[i].assis.length ? ' &nbsp;' + t[i].assis.join(", ") : "") +
+        '</span><span class="salon__places">' + t[i].libres + ' place' +
+        (t[i].libres > 1 ? "s" : "") + '</span>' +
+        (t[i].libres > 0 ? '<button data-rejoindre="' + t[i].id + '">Rejoindre</button>' : '') +
+        '</div>';
+    }
+    liste.innerHTML = html;
+  }).catch(function(){
+    liste.innerHTML = '<p class="salon__note">Le serveur ne répond pas. Réessaie dans un instant.</p>';
+  });
+}
+
+/* ON NE S'ASSOIT PAS SANS DIRE SON NOM : l'autre joueur doit savoir qui arrive. */
+function exigerLeNom(){
+  var champ = $("#salon-nom"), n = (champ.value || "").trim();
+  if (n){
+    champ.classList.remove("manque");
+    try { localStorage.setItem("tptc-nom", n); } catch (e) {}
+    return n.slice(0, 18);
+  }
+  champ.classList.add("manque");
+  champ.focus();
+  $("#salon-nom-note").textContent = "Il faut un nom pour t'asseoir à la table.";
+  return null;
+}
+
+/* LE JETON NE CHANGE PAS PENDANT UNE VISITE : c'est lui qui dit au serveur
+   « c'est moi qui reviens » après une coupure. Tenu en mémoire, parce que le
+   stockage peut être indisponible en navigation privée. */
+var JETON = null;
+function monJeton(){
+  if (JETON) return JETON;
+  try { JETON = localStorage.getItem("tptc-jeton"); } catch (e) {}
+  if (!JETON){
+    JETON = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    try { localStorage.setItem("tptc-jeton", JETON); } catch (e) {}
+  }
+  return JETON;
+}
+
+function couperLaPrecedente(){
+  if (!ligne) return;
+  ligne.parti = true;
+  if (ligne.ws){ try { ligne.ws.close(); } catch (e) {} }
+  clearTimeout(rappel); rappel = null;
+  arreterSablier();
+}
+
+function ouvrirTable(donnes){
+  if (!exigerLeNom()) return;
+  if (!SERVEUR){ dire("Le serveur n'est pas encore en service."); return; }
+  couperLaPrecedente();
+  fetch(SERVEUR + "/creer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ donnes: donnes })
+  }).then(function(r){ return r.json(); })
+    .then(function(d){ if (d.id) rejoindreTable(d.id, donnes); })
+    .catch(function(){ dire("Le serveur ne répond pas."); });
+}
+
+function rejoindreTable(id, donnes){
+  var nom = exigerLeNom();
+  if (!nom) return;
+  if (donnes){ connecter(id, nom, donnes); return; }
+  /* On arrive par un lien : on demande à la table ce qu'elle est avant de s'y
+     asseoir, plutôt que d'imposer nos propres valeurs par défaut. */
+  fetch(SERVEUR + "/table/" + id).then(function(r){ return r.json(); })
+    .then(function(d){ connecter(id, nom, d.donnesMax); })
+    .catch(function(){ connecter(id, nom, donnes); });
+}
+
+function connecter(id, nom, donnes){
+  couperLaPrecedente();
+  var url = SERVEUR.replace(/^http/, "ws") + "/table/" + id +
+    "?nom=" + encodeURIComponent(nom) + "&jeton=" + encodeURIComponent(monJeton()) +
+    "&donnes=" + (Number(donnes) === 5 ? 5 : 3);
+  var ws = new WebSocket(url);
+  ligne = { ws: ws, monSiege: -1, id: id, nom: nom, donnes: donnes, parti: false };
+  fermerSalon();
+  $("#quitter").hidden = false;
+  dire(essais ? "On te remet à ta place…" : "Connexion à la table…");
+
+  ws.onopen = function(){ essais = 0; };
+  ws.onmessage = function(ev){
+    if (!ligne || ligne.ws !== ws) return;
+    var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+    if (m.t === "place")  ligne.monSiege = m.siege;
+    if (m.t === "refus")  { dire(m.raison); quitterLaTable(); }
+    if (m.t === "erreur") dire(m.texte);
+    if (m.t === "etat")   afficherVue(m.vue);
+  };
+  ws.onclose = function(){
+    if (!ligne || ligne.parti || ligne.ws !== ws) return;
+    reprendre();
+  };
+}
+
+/* On rappelle la table, de plus en plus espacé, sans jamais harceler. */
+function reprendre(){
+  if (!ligne || ligne.parti) return;
+  var lu = ligne;
+  if (essais >= 10){ dire("La table ne répond plus. Reviens par ton lien quand tu veux."); return; }
+  var attente = Math.min(8000, 800 * Math.pow(2, essais));
+  essais++;
+  dire("Connexion perdue. On te remet à ta place… (" + essais + ")");
+  clearTimeout(rappel);
+  rappel = setTimeout(function(){ connecter(lu.id, lu.nom, lu.donnes); }, attente);
+}
+
+function quitterLaTable(){
+  if (ligne) ligne.parti = true;
+  clearTimeout(rappel); rappel = null; essais = 0;
+  if (ligne && ligne.ws){ try { ligne.ws.close(); } catch (e) {} }
+  arreterSablier();
+  ligne = null;
+  tchatOuvert = false; tchatSignature = ""; tchatLus = 0;
+  $("#quitter").hidden = true;
+  $("#invite").hidden = true;
+  $("#score").innerHTML = "";
+  $("#tchat").hidden = true;
+  $("#tchat-bulle").hidden = true;
+  if (location.hash){ try { history.replaceState(null, "", location.pathname); } catch (e) {} }
+  $("#mode").value = "ordinateur";
+  nouvellePartie();
+}
+
+/* ═══════════════════════════════════════════════════════════ INVITER ═══
+   Personne n'a de compte : une table se partage par un LIEN, et rien d'autre.
+   Le lien se bâtit sur l'adresse publique, jamais sur l'adresse courante :
+   ouvert depuis un fichier local, on enverrait un lien qui ne mène nulle part. */
+function lienDeMaTable(){
+  if (!ligne || !ligne.id) return null;
+  var base = ADRESSE_JEU;
+  if (location.protocol === "http:" || location.protocol === "https:"){
+    base = location.origin + location.pathname;
+  }
+  return base + "#t=" + ligne.id;
+}
+
+function montrerInvitation(vue){
+  var bloc = $("#invite"), lien = lienDeMaTable();
+  if (!lien || !vue || !vue.enAttente){ bloc.hidden = true; return; }
+  bloc.hidden = false;
+  $("#invite-url").value = lien;
+  $("#invite-wa").href = "https://wa.me/?text=" +
+    encodeURIComponent("Viens jouer à Ti Point Ti Croix avec moi : " + lien);
+}
+
+function tableInvitee(){
+  var m = (location.hash || "").match(/^#t=([a-z0-9-]{4,40})$/i);
+  return m ? m[1] : null;
+}
+
+function accueillirLInvite(){
+  var id = tableInvitee();
+  if (!id) return false;
+  $("#mode").value = "ligne";
+  ouvrirSalon();
+  $("#salon-convie").hidden = false;
+  try { $("#salon-nom").focus(); } catch (e) {}
+  return true;
+}
+
+/* ──────────────────────────────────── ce que le serveur nous dit ── */
+
+/* ON REDESSINE TOUT, à chaque état reçu. Hors ligne le jeu ajoute une marque
+   à la fois, ce qui suffit ; en ligne l'état peut sauter plusieurs coups d'un
+   coup, après une coupure par exemple, et il n'y a qu'une façon sûre d'être
+   d'accord avec l'arbitre : repartir de SA grille. */
+function redessiner(vue){
+  var m = $("#marques");
+  while (m.firstChild) m.removeChild(m.firstChild);
+  dernierCoup = null;
+  var g = vue.grille;
+  if (!g) return;
+  for (var r = 0; r < TAILLE; r++) for (var c = 0; c < TAILLE; c++){
+    if (g[r][c]) poser(r, c, g[r][c]);
+  }
+  /* poser() a laissé son anneau sur la dernière case dessinée, qui n'est pas
+     la dernière JOUÉE : on le repose là où l'arbitre dit qu'il va. */
+  if (dernierCoup) dernierCoup.remove();
+  dernierCoup = null;
+  if (vue.dernier){
+    var d = vue.dernier;
+    dernierCoup = svgel("circle");
+    dernierCoup.setAttribute("cx", x(d[1])); dernierCoup.setAttribute("cy", y(d[0]));
+    dernierCoup.setAttribute("r", 11); dernierCoup.setAttribute("class", "dernier");
+    m.appendChild(dernierCoup);
+  }
+  if (vue.fini && vue.resultat && vue.resultat.cellules) barrer(vue.resultat.cellules);
+}
+
+function afficherVue(vue){
+  if (!ligne) return;
+  ligne.vue = vue;
+  if (vue.monSiege !== undefined) ligne.monSiege = vue.monSiege;
+
+  plateau = vue.grille || plateau;
+  fini = !!vue.fini;
+  humain = !!vue.aMoi;
+  arreterChrono();
+  redessiner(vue);
+  dessinerScore(vue);
+  montrerInvitation(vue);
+  dessinerTchat();
+
+  if (vue.enAttente){
+    dire("En attente de l'autre joueur…");
+  } else if (vue.fini){
+    var r = vue.resultat;
+    if (r && r.nul) dire("🤝 La grille est pleine, personne ne gagne");
+    else if (r && r.gagnant === vue.monSiege) dire("🎉 Bravo, tu as gagné !");
+    else dire("😈 " + nomDeLaPlace(r ? r.gagnant : 0) + " a gagné");
+    majPartage(vue.fini && vue.resultat && vue.resultat.gagnant === vue.monSiege
+               ? "🎉 Bravo, tu as gagné !" : "", vue.resultat && vue.resultat.cellules);
+  } else if (vue.aMoi){
+    dire("À toi de jouer");
+  } else {
+    dire(nomDeLaPlace(vue.tour) + " réfléchit…");
+  }
+
+  $("#rejouer").textContent = (vue.fini && !vue.finie) ? "Manche suivante" : "Rejouer";
+  lancerSablier();
+}
+
+function nomDeLaPlace(siege){
+  var vue = enLigne() ? LIGNE.vue() : null;
+  if (!vue || !vue.places[siege]) return "L'autre joueur";
+  return vue.places[siege].nom || "Place libre";
+}
+
+function dire(texte){ $("#etat").textContent = texte; }
+
+function dessinerScore(vue){
+  if (!vue || vue.enAttente){ $("#score").innerHTML = ""; return; }
+  var html = "";
+  for (var j = 0; j < vue.places.length; j++){
+    html += '<span>' + (vue.places[j].nom || "Place libre") + ' <b>' + (vue.score[j] || 0) + '</b></span>';
+  }
+  html += '<span>Manche <b>' + Math.min(vue.donnes + (vue.fini ? 0 : 1), vue.donnesMax) +
+          '</b> sur ' + vue.donnesMax + '</span>';
+  if (vue.meneur >= 0 && vue.serie > 0){
+    html += vue.serie >= 3
+      ? '<span class="cochon">' + nomDeLaPlace(vue.meneur) + " a mis cochon !</span>"
+      : '<span>' + nomDeLaPlace(vue.meneur) + " : " + vue.serie + " d'affilée</span>";
+  }
+  $("#score").innerHTML = html;
+}
+
+function envoyerEnLigne(message){
+  if (!ligne || !ligne.ws) return;
+  if (ligne.ws.readyState !== 1){ dire("Connexion perdue. On te remet à ta place…"); reprendre(); return; }
+  try { ligne.ws.send(JSON.stringify(message)); }
+  catch (e){ dire("Connexion perdue. On te remet à ta place…"); reprendre(); }
+}
+
+/* ─────────────────────────────────────── LE SABLIER DE LA TABLE ──
+   En ligne, l'arbitre joue à la place de qui n'a pas répondu au bout d'une
+   minute. Sans compteur visible, on voit une marque partir toute seule sans
+   comprendre pourquoi. */
+function arreterSablier(){
+  clearInterval(sablier); sablier = null;
+  var e = $("#chrono");
+  if (e && enLigne()) e.textContent = "--";
+}
+
+function lancerSablier(){
+  arreterSablier();
+  var vue = enLigne() ? LIGNE.vue() : null;
+  if (!vue || !vue.echeance || vue.fini || vue.enAttente) return;
+  var e = $("#chrono");
+  if (!e) return;
+  function battre(){
+    var reste = Math.ceil((vue.echeance - Date.now()) / 1000);
+    if (reste < 0) reste = 0;
+    e.textContent = reste + " s";
+    if (reste <= 0) arreterSablier();
+  }
+  battre();
+  sablier = setInterval(battre, 1000);
+}
+
+/* ══════════════════════════════════════════ LE TCHAT DE TABLE ══════════ */
+var tchatOuvert = false, tchatSignature = "", tchatLus = 0;
+var TCHAT_FRIMOUSSES = ["👍","😀","😂","😮","😉","😤","🔥","💪","🎉","🙏","🤝","🐉"];
+
+function dessinerTchat(){
+  var bloc = $("#tchat"), bulle = $("#tchat-bulle");
+  if (!bloc || !bulle) return;
+  var vue = enLigne() ? LIGNE.vue() : null;
+  if (!vue){ bloc.hidden = true; bulle.hidden = true; return; }
+  bloc.hidden = !tchatOuvert;
+  bulle.hidden = tchatOuvert;
+  if (tchatOuvert) remplirTchat();
+
+  var msgs = vue.tchat || [], neufs = 0;
+  for (var i = 0; i < msgs.length; i++){
+    if (msgs[i].n > tchatLus && msgs[i].siege !== vue.monSiege) neufs++;
+  }
+  if (tchatOuvert){
+    if (msgs.length) tchatLus = msgs[msgs.length - 1].n;
+    neufs = 0;
+  }
+  var p = $("#tchat-pastille");
+  p.hidden = !neufs;
+  p.textContent = neufs > 9 ? "9+" : neufs;
+}
+
+function remplirTchat(){
+  var vue = enLigne() ? LIGNE.vue() : null, fil = $("#tchat-fil");
+  if (!fil || !vue) return;
+  var msgs = vue.tchat || [];
+  var signature = msgs.length ? (msgs[msgs.length - 1].n + ":" + msgs.length) : "0";
+  if (signature === tchatSignature) return;
+  tchatSignature = signature;
+  /* On ne redescend que si l'on était déjà en bas : sinon un message qui
+     arrive arrache sa lecture à celui qui remonte le fil. */
+  var enBas = fil.scrollHeight - (fil.scrollTop + fil.clientHeight) < 50;
+  fil.textContent = "";
+  if (!msgs.length){
+    var vide = document.createElement("div");
+    vide.className = "tchat__vide";
+    vide.textContent = "Dis quelque chose à la table.";
+    fil.appendChild(vide);
+  }
+  var precedent = -1;
+  for (var i = 0; i < msgs.length; i++){
+    var m = msgs[i], moi = (m.siege === vue.monSiege);
+    if (!moi && m.siege !== precedent){
+      var nom = document.createElement("div");
+      nom.className = "tchat__nom";
+      nom.textContent = m.nom;
+      fil.appendChild(nom);
+    }
+    precedent = moi ? -2 : m.siege;
+    var l = document.createElement("div");
+    l.className = "tchat__bloc" + (moi ? " tchat__bloc--moi" : "");
+    var mot = document.createElement("span");
+    mot.className = "tchat__mot" + (moi ? " tchat__mot--moi" : "");
+    /* JAMAIS innerHTML : ce texte est écrit par un autre joueur. */
+    mot.textContent = m.texte;
+    l.appendChild(mot);
+    fil.appendChild(l);
+  }
+  if (enBas) fil.scrollTop = fil.scrollHeight;
+}
+
+function ouvrirTchat(){
+  tchatOuvert = true; tchatSignature = "";
+  dessinerTchat();
+  try { $("#tchat-champ").focus(); } catch (e) {}
+}
+function fermerTchat(){
+  tchatOuvert = false;
+  $("#tchat-palette").hidden = true;
+  dessinerTchat();
+}
+function envoyerTchat(e){
+  if (e) e.preventDefault();
+  var champ = $("#tchat-champ"), texte = (champ.value || "").trim();
+  if (!texte) return;
+  if (!lienVivant()){ dire("Connexion perdue. On te remet à ta place…"); return; }
+  envoyerEnLigne({ t: "parler", texte: texte });
+  champ.value = "";
+  $("#tchat-palette").hidden = true;
+  champ.focus();
+}
+function basculerPalette(){
+  var pal = $("#tchat-palette");
+  if (!pal.firstChild){
+    for (var i = 0; i < TCHAT_FRIMOUSSES.length; i++){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = TCHAT_FRIMOUSSES[i];
+      pal.appendChild(b);
+    }
+  }
+  pal.hidden = !pal.hidden;
+}
+
 function nouvellePartie(){
+  if (enLigne()) return;               /* la table en ligne mène sa propre manche */
   plateau = [];
   for (var r = 0; r < TAILLE; r++) plateau.push(new Array(TAILLE).fill(""));
   fini = false; tour = "P"; humain = true; dernierCoup = null;
@@ -1267,8 +1932,11 @@ function nouvellePartie(){
 
 function rejouer(){
   etat.parties++; sauver();
-  nouvellePartie();
   if (TALLY && !etat.forme) setTimeout(ouvrirFormulaire, 260);
+  /* En ligne, on ne rebat pas les cartes soi-même : on demande à l'arbitre,
+     et les deux écrans repartent ensemble. */
+  if (enLigne()){ envoyerEnLigne({ t: "relancer" }); return; }
+  nouvellePartie();
 }
 
 function demarrer(){
@@ -1288,8 +1956,63 @@ function demarrer(){
       location.href = "a-distance.html";
       return;
     }
+    if ($("#mode").value === "ligne"){ ouvrirSalon(); return; }
+    if (enLigne()){ quitterLaTable(); return; }
     nouvellePartie();                                      /* changer de mode rebat les cartes */
   });
+
+  /* ─── LES TABLES EN LIGNE ────────────────────────────────────────────── */
+  $("#salon-fermer").addEventListener("click", function(){
+    fermerSalon();
+    if (!enLigne()) $("#mode").value = "ordinateur";
+  });
+  $("#salon-ouvrir").addEventListener("click", function(){
+    ouvrirTable(parseInt($("#salon-donnes").value, 10) === 5 ? 5 : 3);
+  });
+  $("#salon-convie-ok").addEventListener("click", function(){
+    var id = tableInvitee();
+    if (id) rejoindreTable(id);
+  });
+  $("#salon-tables").addEventListener("click", function(e){
+    var b = e.target.closest ? e.target.closest("[data-rejoindre]") : null;
+    if (b) rejoindreTable(b.getAttribute("data-rejoindre"));
+  });
+  $("#quitter").addEventListener("click", quitterLaTable);
+  $("#invite-copier").addEventListener("click", function(){
+    var champ = $("#invite-url"), bouton = this;
+    champ.select();
+    var fait = function(){
+      bouton.textContent = "Copié !";
+      setTimeout(function(){ bouton.textContent = "Copier"; }, 1800);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(champ.value).then(fait, function(){
+        try { document.execCommand("copy"); fait(); } catch (e) {}
+      });
+    } else { try { document.execCommand("copy"); fait(); } catch (e) {} }
+  });
+  try {
+    var nomGarde = localStorage.getItem("tptc-nom");
+    if (nomGarde) $("#salon-nom").value = nomGarde;
+  } catch (e) {}
+
+  /* ─── LE TCHAT ───────────────────────────────────────────────────────── */
+  $("#tchat-bulle").addEventListener("click", ouvrirTchat);
+  $("#tchat-replier").addEventListener("click", fermerTchat);
+  $("#tchat-barre").addEventListener("submit", envoyerTchat);
+  $("#tchat-emoji").addEventListener("click", basculerPalette);
+  $("#tchat-palette").addEventListener("click", function(e){
+    if (e.target.tagName !== "BUTTON") return;
+    var champ = $("#tchat-champ"), i = champ.selectionStart;
+    if (i === null || i === undefined) i = champ.value.length;
+    champ.value = champ.value.slice(0, i) + e.target.textContent + champ.value.slice(i);
+    champ.focus();
+    try { champ.setSelectionRange(i + 2, i + 2); } catch (err) {}
+  });
+
+  /* On arrive peut-être par un lien d'invitation : c'est la dernière chose
+     qu'on regarde, une fois tous les boutons en place. */
+  accueillirLInvite();
   document.addEventListener("keydown", function(e){ if (e.key === "Escape") fermerFormulaire(); });
 
   /* Tally prévient la page quand le formulaire est envoyé : on laisse son
