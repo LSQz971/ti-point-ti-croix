@@ -71,6 +71,12 @@ button{
 }
 button:hover{filter:brightness(1.08)}
 #rejouer{flex:0 0 100%;max-width:230px;margin:2px auto 0}
+/* Le partage de la victoire. Vert, plus large que les réglages, il ne
+   paraît qu'une fois la partie gagnée et il se voit tout de suite. */
+.partager{
+  flex:0 0 100%;max-width:230px;margin:6px auto 0;
+  background:#166B10;color:#fff;font-weight:700;
+}
 .bouton--pale{
   background:transparent;color:var(--encre-2);
   border:1px solid rgba(255,255,255,.22);box-shadow:none;
@@ -189,6 +195,10 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
       </select>
     </label>
     <button id="rejouer" type="button">Rejouer</button>
+    <!-- LA VICTOIRE SE MONTRE. C'est le moteur du jeu : une partie gagnée
+         qu'on affiche en statut WhatsApp emmène le lien avec elle. Il ne
+         s'affiche qu'après une vraie victoire, jamais avant. -->
+    <button class="partager" id="partager" type="button" hidden>Partager ma victoire</button>
   </div>
 
   <div class="etat" id="etat">À toi de jouer</div>
@@ -307,9 +317,24 @@ function noterInscrit(){
 
      facile     on doit TOUJOURS le battre. Mesuré : 288 parties contre quatre
                 profils de joueurs, zéro défaite du joueur.
-     moyenne    on doit le battre, mais il faut jouer : une vingtaine de coups
-                pour un joueur qui sait s'y prendre, et il gagne encore une
-                partie sur cinq. Un débutant, lui, ne le bat pas.
+     moyenne    on doit le battre, mais il faut jouer : une quinzaine de coups
+                au moins pour un joueur qui sait s'y prendre, et il gagne
+                encore trois parties sur quatre. Un débutant, lui, ne le bat
+                jamais.
+
+   RÉGLAGE DU 03/09/2026, demandé par Pierre : « moyenne est un tout petit peu
+   difficile, à réduire LÉGÈREMENT, PAS BEAUCOUP ». Mesuré sur trois passages
+   de seize parties contre l'étalon, le bon joueur le battait 2,67 fois sur
+   seize : trop près de « difficile ». Le levier retenu est `oubli`, et lui
+   seul a bougé quelque chose. Mesures moyennes, débutant toujours à 0/16 :
+       oubli 0,00 (avant)  2,67/16   plus court 14
+       oubli 0,25 (retenu) 4,00/16   plus court 13
+       oubli 0,40          3,67/16   plus court 14
+       oubli 0,60          6,33/16   plus court 13
+       garde 1             5,00/16   plus court 12
+   0,25 rend le niveau moitié plus battable sans en faire un niveau facile ;
+   0,60 le doublait, c'était trop. `hesitation` et `defense`, eux, ne mesurent
+   rien : 3 contre 4 donne 4/16 contre 2,75/16 sur quatre passages, du bruit.
      difficile  on ne doit JAMAIS le battre.
 
    MOYENNE ne calcule pas à l'avance (profondeur 0) : il lit bien la position
@@ -326,7 +351,7 @@ function noterInscrit(){
    test_moteur.js les vérifie une par une. */
 var NIVEAUX = {
   facile:    { mou: 12, bride: 1 },
-  moyenne:   { profondeur: 0, defense: 1.00, hesitation: 3, menaces: false, garde: 2 },
+  moyenne:   { profondeur: 0, defense: 1.00, hesitation: 3, menaces: false, garde: 2, oubli: 0.25 },
   difficile: { profondeur: 6, defense: 1.00, hesitation: 1, menaces: true  }
 };
 
@@ -936,8 +961,20 @@ function choisirCoup(){
     }
     /* garde 2 : il étouffe aussi la fourchette, les deux menaces d'un coup.
        Il ne reste alors qu'une façon de le battre, la construire en plusieurs
-       temps, et ça ne se fait pas en cinq coups. */
-    if (n.garde >= 2)
+       temps, et ça ne se fait pas en cinq coups.
+
+       `oubli` : À QUELLE FRÉQUENCE IL LA LAISSE PASSER (Pierre, 03/09/2026,
+       « moyenne est un tout petit peu difficile, à réduire LÉGÈREMENT »).
+       Un joueur du milieu ne voit pas toutes les doubles menaces, et c'est
+       par là qu'on doit pouvoir le prendre. Le tirage se fait UNE FOIS par
+       coup, jamais par candidat : sinon la fréquence dépendrait du nombre de
+       cases examinées, donc du remplissage de la grille, et le réglage ne
+       voudrait plus rien dire.
+       Ce levier a été choisi au banc parce que les autres ne mesurent rien :
+       `hesitation` 3 contre 4 donne 4/16 contre 2,75/16 sur quatre passages,
+       soit du bruit, et `defense` ne pèse presque pas à profondeur nulle. */
+    var voitLaFourchette = !n.oubli || Math.random() >= n.oubli;
+    if (n.garde >= 2 && voitLaFourchette)
       for (i = 0; i < liste.length; i++)
         if (vus[i].forcing >= 2) return liste[i];
     /* garde 3 : il casse en plus son gain par quatres forcés. À ce stade il ne
@@ -1092,6 +1129,63 @@ function terminer(message, cellules){
   if (cellules) barrer(cellules);
   $("#etat").textContent = message;
   etat.dernier = message; sauver();
+  majPartage(message, cellules);
+}
+
+/* ═══════════════════════════════════════════════ PARTAGER SA VICTOIRE ═══
+   Demandé par Pierre le 03/09/2026, comme au domino. Une partie gagnée ne
+   doit pas s'éteindre en silence : c'est le meilleur moment du jeu, et c'est
+   aussi ce qui le fait voyager. Le texte dit ce qui s'est RÉELLEMENT passé,
+   jamais autre chose : on ne se vante pas d'une partie qu'on n'a pas gagnée,
+   et le bouton ne s'affiche que sur une victoire du joueur. */
+var ADRESSE_PUBLIQUE = "https://lsqz971.github.io/ti-point-ti-croix/";
+
+function adressePublique(){
+  if (location.protocol === "http:" || location.protocol === "https:"){
+    return location.origin + location.pathname;
+  }
+  return ADRESSE_PUBLIQUE;
+}
+
+/* Le nombre de coups posés dit la difficulté de la partie mieux qu'un
+   adjectif : « en 9 coups » se comprend sans rien expliquer. */
+function mesCoups(){
+  var n = 0;
+  for (var r = 0; r < TAILLE; r++) for (var c = 0; c < TAILLE; c++){
+    if (plateau[r][c] === "P") n++;
+  }
+  return n;
+}
+
+function texteDeVictoire(){
+  var niveau = $("#difficulte").value;
+  var nom = niveau === "difficile" ? "en difficile"
+          : niveau === "facile"    ? "en facile"
+                                   : "en moyenne";
+  return "J'ai aligné mes cinq marques " + nom + " en " + mesCoups() +
+         " coups, à Ti Point Ti Croix.\n\nÀ toi de jouer : " + adressePublique();
+}
+
+function majPartage(message, cellules){
+  var b = $("#partager");
+  if (!b) return;
+  /* On ne se fie pas au texte affiché : c'est la CELLULE gagnante et le tour
+     qui disent qui a gagné. Un message peut changer, un alignement non. */
+  var gagne = !!cellules && message.indexOf("Bravo") !== -1;
+  b.hidden = !gagne;
+  b.dataset.texte = gagne ? texteDeVictoire() : "";
+}
+
+function partagerLaVictoire(){
+  var texte = $("#partager").dataset.texte || "";
+  if (!texte) return;
+  /* Le partage NATIF d'abord : c'est lui, et lui seul, qui donne accès au
+     STATUT WhatsApp sur téléphone. Le lien wa.me n'ouvre qu'une discussion. */
+  if (navigator.share){
+    navigator.share({ text: texte }).catch(function(){});
+    return;
+  }
+  window.open("https://wa.me/?text=" + encodeURIComponent(texte), "_blank", "noopener");
 }
 
 /* ──────────────────────────────────────────────────────── le chrono ──
@@ -1166,6 +1260,8 @@ function nouvellePartie(){
   var m = $("#marques");
   while (m.firstChild) m.removeChild(m.firstChild);
   $("#etat").textContent = "À toi de jouer";
+  var b = $("#partager");
+  if (b){ b.hidden = true; b.dataset.texte = ""; }   /* la victoire d'avant n'est plus */
   lancerChrono();
 }
 
@@ -1179,6 +1275,7 @@ function demarrer(){
   tracerGrille();
   nouvellePartie();
   $("#rejouer").addEventListener("click", rejouer);
+  $("#partager").addEventListener("click", partagerLaVictoire);
   $("#voile-fermer").addEventListener("click", fermerFormulaire);
   $("#duree").addEventListener("change", function(){ if (!fini && humain) lancerChrono(); });
   /* Le mode « à distance » n'est pas un mode de CETTE page : c'est l'autre
