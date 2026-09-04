@@ -83,6 +83,14 @@ button:hover{filter:brightness(1.08)}
 }
 
 .etat{min-height:30px;font-size:17px;font-weight:700}
+/* L'AVIS DE TABLE. Ce que l'écran ne peut pas montrer tout seul : une place qui
+   se vide ne change rien à la grille, et en fin de match plus rien ne bouge. */
+.avis{
+  margin:8px auto 0;max-width:460px;
+  font-size:14px;font-weight:600;line-height:1.35;
+  color:#FFD0A8;background:rgba(255,140,70,.12);
+  border:1px solid rgba(255,140,70,.38);border-radius:12px;padding:9px 13px;
+}
 .chrono{font-size:14px;color:var(--encre-2);margin:2px 0 14px}
 .chrono b{color:var(--or);font-variant-numeric:tabular-nums}
 .chrono b.presse{color:#FF6B4A}
@@ -206,6 +214,7 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
 .score{font-size:13px;color:var(--encre-2);margin:8px 0 0;display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
 .score b{color:#fff}
 .score .cochon{color:#FFD666;font-weight:700}
+.score .parti{font-style:normal;color:#FFB27A;font-weight:700}
 
 /* Le tchat, posé SUR le tapis, en bas à droite. Relevé chez Ludicash le
    03/09/2026 : une seule ligne de saisie, fond translucide, et il se replie. */
@@ -347,6 +356,7 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
   </div>
 
   <div class="etat" id="etat">À toi de jouer</div>
+  <div class="avis" id="avis" role="status" hidden></div>
   <div class="chrono">Temps pour jouer : <b id="chrono">--</b></div>
 
   <div class="tapis">
@@ -469,12 +479,19 @@ function souffle(r, c, dr, dc){
   return n;
 }
 
-/* Le formulaire L'SQz de CE jeu, hébergé sur Tally, qui atterrit dans la
-   base Notion « Inscrits à l'indice » : page 1 les questions sur les ateliers,
-   page 2 le contact. C'est un formulaire PROPRE au jeu, distinct de celui de
-   BITEN A GRANMOUN (obZNYM), qui n'a pas été touché. Pour en changer, coller
-   ici la fin de son adresse : pour tally.so/r/wAbCdE, on écrit "wAbCdE".
-   Vide, le formulaire ne s'ouvre jamais. */
+/* Le formulaire L'SQz, hébergé sur Tally, qui atterrit dans la base Notion
+   « Inscrits à l'indice » : page 1 les questions sur les ateliers, page 2 le
+   contact.
+
+   ATTENTION, IL N'EST PAS PROPRE À CE JEU (vérifié dans le code le
+   03/09/2026, le commentaire précédent disait le contraire et il était faux) :
+   le MÊME 1AQxXb sert à Ti Point Ti Croix (ses deux pages), au DOMINO, et à la
+   porte « Revenir à la grille » de BITEN A GRANMOUN (son TALLY_GRILLE).
+   Toucher à son texte touche donc les trois jeux d'un coup. Seule la porte
+   « Reçois l'indice » de BITEN a un formulaire à elle, obZNYM.
+
+   Pour en changer, coller ici la fin de son adresse : pour tally.so/r/wAbCdE,
+   on écrit "wAbCdE". Vide, le formulaire ne s'ouvre jamais. */
 var TALLY = "1AQxXb";
 var STOCKAGE = "ti-point-ti-croix/v1";
 
@@ -517,41 +534,67 @@ function noterInscrit(){
 
      facile     on doit TOUJOURS le battre. Mesuré : 288 parties contre quatre
                 profils de joueurs, zéro défaite du joueur.
-     moyenne    on doit le battre, mais il faut jouer : une quinzaine de coups
-                au moins pour un joueur qui sait s'y prendre, et il gagne
-                encore trois parties sur quatre. Un débutant, lui, ne le bat
-                jamais.
-
-   RÉGLAGE DU 03/09/2026, demandé par Pierre : « moyenne est un tout petit peu
-   difficile, à réduire LÉGÈREMENT, PAS BEAUCOUP ». Mesuré sur trois passages
-   de seize parties contre l'étalon, le bon joueur le battait 2,67 fois sur
-   seize : trop près de « difficile ». Le levier retenu est `oubli`, et lui
-   seul a bougé quelque chose. Mesures moyennes, débutant toujours à 0/16 :
-       oubli 0,00 (avant)  2,67/16   plus court 14
-       oubli 0,25 (retenu) 4,00/16   plus court 13
-       oubli 0,40          3,67/16   plus court 14
-       oubli 0,60          6,33/16   plus court 13
-       garde 1             5,00/16   plus court 12
-   0,25 rend le niveau moitié plus battable sans en faire un niveau facile ;
-   0,60 le doublait, c'était trop. `hesitation` et `defense`, eux, ne mesurent
-   rien : 3 contre 4 donne 4/16 contre 2,75/16 sur quatre passages, du bruit.
+     moyenne    on doit le battre, mais il faut jouer.
      difficile  on ne doit JAMAIS le battre.
 
-   MOYENNE ne calcule pas à l'avance (profondeur 0) : il lit bien la position
-   du moment, mais il ne voit pas le coup d'après, et il hésite entre ses trois
-   meilleurs coups. Ce qu'il ne rate jamais, en revanche, c'est le croisement
-   qui donnerait à l'adversaire un quatre ouvert ou une fourchette : c'est le
-   rôle de `garde`, et c'est ce qui interdit de le battre en alignant cinq
-   pions tout droit. Sans lui on le pliait en six coups ; avec lui, il en faut
-   au moins quinze, parce qu'il faut construire une fourchette en plusieurs
-   temps. Ce qui lui manque toujours, et par où on le bat : il ne voit ni les
-   gains forcés ni ce qui se prépare deux coups plus loin.
+   RÉGLAGE DU 04/09/2026 : « le niveau moyen est TOUJOURS trop difficile »
+   (Pierre, après le réglage du 03/09 qui n'avait rien changé pour lui).
+
+   POURQUOI LE RÉGLAGE DU 03/09 A RATÉ : il était mesuré contre le seul joueur
+   ÉTALON, celui qui déroule l'échelle des menaces sans faute et qui construit
+   des fourchettes exprès. Or ce n'est pas ce joueur-là qui trouvait le niveau
+   dur. On a donc écrit un troisième profil de banc, le joueur RÉALISTE : il
+   prend son cinq, il bouche un cinq, il bouche un quatre ouvert trois fois
+   sur quatre, il pousse sa meilleure ligne, et il ne fabrique JAMAIS de
+   fourchette. C'est le joueur du dimanche, et c'est celui qui compte.
+
+   Mesuré sur 250 parties par profil, à l'ancien réglage (garde 2, oubli 0,25,
+   hésitation 3), la colonne qu'on n'avait jamais regardée :
+
+        joueur réaliste     il gagne   6 sur 250, soit 2,4 %
+        bon joueur          il gagne  59 sur 250, soit 24 %
+        débutant            il gagne   1 sur 250
+
+   Autrement dit le niveau « moyen » gagnait 97 parties sur 100 contre
+   quelqu'un qui joue normalement. Ce n'était pas un niveau du milieu.
+
+   CE QUI A ÉTÉ CHANGÉ, ET CE QUI NE MARCHAIT PAS. Trois leviers ont été
+   mesurés avant de trancher, chacun sur les mêmes 250 parties :
+        `oubli` seul, de 0,25 à 1,00     le joueur réaliste passe de 2,4 % à
+                                         5,6 % : trop peu.
+        `attaque` (pondérer son propre
+        jeu à 0,75)                      aucun effet mesurable, 3 % : abandonné.
+        `retenue` (il s'interdit de se
+        fabriquer un quatre ouvert)      il cesse de gagner, mais il ne PERD
+                                         pas davantage : 67 % de parties nulles.
+                                         Une table qui ne finit jamais n'est
+                                         pas un cadeau. Abandonné.
+   Le seul couple qui déplace vraiment la ligne est `garde` 1 et `hesitation` 6 :
+
+        joueur réaliste     6 sur 250  →  21 sur 250, soit 8,4 %
+        bon joueur         59 sur 250  → 130 sur 250, soit 52 %
+        débutant            1 sur 250  →   6 sur 250, soit 2,4 %
+        parties nulles              2  →   7
+        cinq pions en ligne droite       toujours bloqué, 0 fois sur 8
+
+   MOYENNE, AUJOURD'HUI. Il ne calcule pas à l'avance (profondeur 0) : il lit
+   la position du moment, il ne voit pas le coup d'après, et il pioche parmi
+   ses SIX meilleurs coups au lieu de trois, ce qui l'empêche de dérouler une
+   attaque parfaite. Il ne rate jamais le croisement qui donnerait à
+   l'adversaire un quatre ouvert (`garde` 1), et c'est ce qui interdit
+   toujours de le battre en alignant cinq pions tout droit. Ce qu'il ne voit
+   plus, et c'est par là qu'on le bat : la FOURCHETTE, les deux menaces d'un
+   seul coup. Un joueur du milieu ne les voit pas non plus.
+
+   CE QUE ÇA COÛTE, dit franchement : un débutant le bat maintenant une fois
+   sur quarante, contre jamais avant. C'est le prix d'un niveau réellement
+   battable, et test_moteur.js le mesure au lieu de l'interdire.
 
    Les modifier au jugé casse les promesses affichées dans le menu ;
    test_moteur.js les vérifie une par une. */
 var NIVEAUX = {
   facile:    { mou: 12, bride: 1 },
-  moyenne:   { profondeur: 0, defense: 1.00, hesitation: 3, menaces: false, garde: 2, oubli: 0.25 },
+  moyenne:   { profondeur: 0, defense: 1.00, hesitation: 6, menaces: false, garde: 1 },
   difficile: { profondeur: 6, defense: 1.00, hesitation: 1, menaces: true  }
 };
 
@@ -1150,9 +1193,10 @@ function choisirCoup(){
      faire aligner cinq pions sous le nez : il occupe le croisement qui
      donnerait à l'adversaire un quatre ouvert, autrement dit il répond à un
      trois ouvert. C'est la seule chose qui sépare « on le bat en six coups en
-     ligne droite » de « il faut lui fabriquer une fourchette ». Il ne voit
-     toujours ni les fourchettes ni les gains forcés, et c'est bien par là
-     qu'on doit le battre : ça demande de construire, donc des coups. */
+     ligne droite » de « il faut lui fabriquer quelque chose ». Depuis le
+     04/09/2026 il en reste LÀ, à `garde` 1 : il ne voit ni la fourchette, ni
+     les gains forcés, ni ce qui se prépare deux coups plus loin, et c'est
+     exactement par là qu'on le bat. */
   if (n.garde){
     var vus = [];
     for (i = 0; i < liste.length; i++){
@@ -1160,28 +1204,24 @@ function choisirCoup(){
       if (vus[i].imparable) return liste[i];        /* son quatre ouvert : jamais */
     }
     /* garde 2 : il étouffe aussi la fourchette, les deux menaces d'un coup.
-       Il ne reste alors qu'une façon de le battre, la construire en plusieurs
-       temps, et ça ne se fait pas en cinq coups.
+       `oubli` dit à quelle fréquence il la laisse passer ; le tirage se fait
+       UNE FOIS par coup, jamais par candidat, sinon la fréquence dépendrait du
+       remplissage de la grille et le réglage ne voudrait plus rien dire.
 
-       `oubli` : À QUELLE FRÉQUENCE IL LA LAISSE PASSER (Pierre, 03/09/2026,
-       « moyenne est un tout petit peu difficile, à réduire LÉGÈREMENT »).
-       Un joueur du milieu ne voit pas toutes les doubles menaces, et c'est
-       par là qu'on doit pouvoir le prendre. Le tirage se fait UNE FOIS par
-       coup, jamais par candidat : sinon la fréquence dépendrait du nombre de
-       cases examinées, donc du remplissage de la grille, et le réglage ne
-       voudrait plus rien dire.
-       Ce levier a été choisi au banc parce que les autres ne mesurent rien :
-       `hesitation` 3 contre 4 donne 4/16 contre 2,75/16 sur quatre passages,
-       soit du bruit, et `defense` ne pèse presque pas à profondeur nulle. */
+       ⚠ AUCUN NIVEAU N'UTILISE PLUS CE CRAN DEPUIS LE 04/09/2026. « moyenne »
+       est passé à `garde` 1 : mesuré sur 250 parties par profil, boucher les
+       fourchettes lui faisait gagner 97 parties sur 100 contre un joueur qui
+       joue normalement, et aucune valeur d'`oubli`, de 0,25 à 1,00, ne
+       rattrapait cela (2,4 % de victoires du joueur à 0,25, 5,6 % à 0,70).
+       Le cran reste écrit ici parce qu'il est la définition de `garde` 2 et
+       qu'il se rallume en une valeur ; il ne tourne plus. */
     var voitLaFourchette = !n.oubli || Math.random() >= n.oubli;
     if (n.garde >= 2 && voitLaFourchette)
       for (i = 0; i < liste.length; i++)
         if (vus[i].forcing >= 2) return liste[i];
-    /* garde 3 : il casse en plus son gain par quatres forcés. À ce stade il ne
-       reste plus qu'à lui construire une fourchette en plusieurs temps, et ça
-       prend une quinzaine de coups. Il DÉFEND comme un bon joueur, mais il
-       n'attaque toujours pas : c'est ce déséquilibre qui fait le niveau du
-       milieu, long à battre mais battable. */
+    /* garde 3 : il casse en plus son gain par quatres forcés. Cran écrit,
+       jamais employé lui non plus : il rendrait « moyenne » encore moins
+       battable, or c'est l'inverse qu'on cherche. */
     if (n.garde >= 3 && chercherGain("P")){
       for (i = 0; i < liste.length && i < LARGEUR_RACINE; i++){
         m = liste[i];
@@ -1647,6 +1687,14 @@ function reprendre(){
 }
 
 function quitterLaTable(){
+  /* ON PRÉVIENT AVANT DE PARTIR (04/09/2026, signalé par Pierre). Fermer le
+     lien suffit à quitter, mais l'arbitre ne sait pas distinguer ce départ
+     d'une coupure de réseau : il garde la place en silence et l'autre joueur
+     ne voit rien, surtout en fin de match où plus aucun coup n'est attendu.
+     Ce message-là tranche : c'est un départ, il se dit tout de suite. */
+  if (ligne && ligne.ws && ligne.ws.readyState === 1){
+    try { ligne.ws.send(JSON.stringify({ t: "partir" })); } catch (e) {}
+  }
   if (ligne) ligne.parti = true;
   clearTimeout(rappel); rappel = null; essais = 0;
   if (ligne && ligne.ws){ try { ligne.ws.close(); } catch (e) {} }
@@ -1655,6 +1703,7 @@ function quitterLaTable(){
   tchatOuvert = false; tchatSignature = ""; tchatLus = 0;
   $("#quitter").hidden = true;
   $("#invite").hidden = true;
+  $("#avis").hidden = true;
   $("#score").innerHTML = "";
   $("#tchat").hidden = true;
   $("#tchat-bulle").hidden = true;
@@ -1740,6 +1789,7 @@ function afficherVue(vue){
   arreterChrono();
   redessiner(vue);
   dessinerScore(vue);
+  dessinerAvis(vue);
   montrerInvitation(vue);
   dessinerTchat();
 
@@ -1762,6 +1812,32 @@ function afficherVue(vue){
   lancerSablier();
 }
 
+/* CE QUE L'AUTRE A FAIT DE SON CÔTÉ (04/09/2026). La grille ne le dit pas :
+   une place qui se vide ne déplace aucune marque, et une fois le match fini
+   l'écran est figé de toute façon. On restait donc devant une table morte sans
+   savoir qu'on était seul. L'arbitre le dit maintenant dans l'état, cette
+   fonction ne fait que le lire. */
+function dessinerAvis(vue){
+  var e = $("#avis");
+  if (!e) return;
+  var partis = [], j;
+  if (vue && !vue.enAttente && vue.places){
+    for (j = 0; j < vue.places.length; j++){
+      if (j !== vue.monSiege && vue.places[j] && vue.places[j].parti){
+        partis.push(vue.places[j].nom || "L'autre joueur");
+      }
+    }
+  }
+  if (!partis.length){ e.hidden = true; e.textContent = ""; return; }
+  var qui = partis.join(" et ");
+  e.textContent = vue.finie
+    ? qui + " a quitté la table. Le match est terminé : quitte la table, tu peux en ouvrir une autre quand tu veux."
+    : (vue.fini
+        ? qui + " a quitté la table. Si tu lances la manche suivante, tu la joueras contre l'ordinateur."
+        : qui + " a quitté la table. L'ordinateur joue à sa place jusqu'au bout de la manche.");
+  e.hidden = false;
+}
+
 function nomDeLaPlace(siege){
   var vue = enLigne() ? LIGNE.vue() : null;
   if (!vue || !vue.places[siege]) return "L'autre joueur";
@@ -1774,7 +1850,8 @@ function dessinerScore(vue){
   if (!vue || vue.enAttente){ $("#score").innerHTML = ""; return; }
   var html = "";
   for (var j = 0; j < vue.places.length; j++){
-    html += '<span>' + (vue.places[j].nom || "Place libre") + ' <b>' + (vue.score[j] || 0) + '</b></span>';
+    html += '<span>' + (vue.places[j].nom || "Place libre") + ' <b>' + (vue.score[j] || 0) + '</b>' +
+            (vue.places[j].parti ? ' <i class="parti">parti</i>' : '') + '</span>';
   }
   html += '<span>Manche <b>' + Math.min(vue.donnes + (vue.fini ? 0 : 1), vue.donnesMax) +
           '</b> sur ' + vue.donnesMax + '</span>';
