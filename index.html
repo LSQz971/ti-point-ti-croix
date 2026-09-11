@@ -59,6 +59,9 @@ h1{
 }
 .moi b{color:var(--encre);font-weight:800}
 .moi__sep{opacity:.5}
+/* LE NOM SE TOUCHE POUR SE CHANGER : il en garde la couleur de l'encre, sans
+   le trait souligné d'un lien, parce qu'il est d'abord une information. */
+.moi__nom{color:var(--encre);font-weight:800;text-decoration:none}
 .moi__lien{
   background:none;border:0;padding:0;margin:0;width:auto;height:auto;
   color:var(--or);font:inherit;letter-spacing:0;text-transform:none;
@@ -2577,8 +2580,12 @@ function direQuiJeSuis(){
     $("#moi-dire").addEventListener("click", ouvrirMaSaisie);
     return;
   }
-  var html = "<b>" + echapper(n) + "</b>" +
-             ' <button class="moi__lien" id="moi-changer" type="button">changer</button>';
+  /* ⚠️ PLUS DE LIEN « CHANGER » À CÔTÉ DU NOM (Pierre, 11/09/2026 : « c'est
+     quoi ce bouton changer ? il sert à rien ! »). Il disait à voix haute ce
+     que le nom fait déjà : c'est LE NOM qu'on touche pour le changer, et un
+     mot de plus sur la ligne ne servait qu'à l'encombrer. */
+  var html = '<button class="moi__lien moi__nom" id="moi-changer" type="button">' +
+             echapper(n) + "</button>";
   /* ⚠️ LE CHIFFRE S'AFFICHE MÊME À ZÉRO. Zéro victoire est un chiffre, et
      c'est celui qu'on cherche à faire monter. */
   if (monBilan){
