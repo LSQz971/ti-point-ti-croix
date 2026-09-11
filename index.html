@@ -399,7 +399,12 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
 
 /* ── le voile du formulaire ───────────────────────────────────────────── */
 .voile{
-  position:fixed;inset:0;z-index:10;display:grid;place-items:center;
+  /* ⚠️ LE FORMULAIRE PASSE AU-DESSUS DE TOUT, Y COMPRIS DE LA BOÎTE DES
+     TOURNOIS (plan 12). Il s'ouvre à la fin d'un tournoi, donc pendant que
+     cette boîte est ouverte : au plan 10, il s'affichait DERRIÈRE elle et
+     l'on ne voyait que le classement, sans comprendre pourquoi la page
+     s'était assombrie. Constaté et corrigé le 11/09/2026. */
+  position:fixed;inset:0;z-index:20;display:grid;place-items:center;
   padding:var(--pas);background:#093118;opacity:0;transition:opacity .26s;
 }
 .voile--ouvert{opacity:1}
@@ -1735,14 +1740,18 @@ function arreterChrono(){
    Il s'ouvre PAR-DESSUS le jeu, jamais à la place : la nouvelle partie est
    déjà en place derrière. Il revient à chaque « Rejouer » tant qu'il n'a pas
    été envoyé, et plus jamais une fois qu'il l'a été. */
-function ouvrirFormulaire(){
+function ouvrirFormulaire(resultat){
+  /* `resultat` remplace le résultat de la dernière partie quand on arrive
+     d'un tournoi qui vient de se clore : c'est la fin du TOURNOI qui compte
+     alors, pas celle de la dernière partie. Le champ est le même côté Tally,
+     on n'ajoute pas une colonne pour une variante. */
   $("#cadre").src = "https://tally.so/embed/" + TALLY +
     "?hideTitle=1&transparentBackground=1" +
     "&jeu=ti-point-ti-croix" +
     "&mode=" + encodeURIComponent($("#mode").value) +
     "&niveau=" + encodeURIComponent($("#difficulte").value) +
     "&parties=" + etat.parties +
-    "&resultat=" + encodeURIComponent(etat.dernier || "");
+    "&resultat=" + encodeURIComponent(resultat || etat.dernier || "");
   var v = $("#voile");
   v.hidden = false;
   document.body.classList.add("verrou");
@@ -2404,6 +2413,11 @@ function chargerLesTournois(silencieux){
         if (v[i] && v[i].code === tournoi.code){ afficherTournoi(v[i]); return; }
       }
     }
+    /* ⚠️ ON ARRIVE PAR UN LIEN : ON OUVRE CE TOURNOI-LÀ, PAS L'ACCUEIL.
+       Le lien circule sur WhatsApp pour amener quelqu'un DANS un tournoi
+       précis ; le déposer sur la liste des trois, c'est lui faire chercher
+       lui-même celui auquel on vient de l'inviter. */
+    if (d.fanmi && trCode() === d.fanmi.code){ afficherTournoi(d.fanmi); return; }
     montrerLAccueil();
   }).catch(function(){ if (!silencieux) dire("Le serveur ne répond pas."); });
 }
@@ -2641,10 +2655,49 @@ function afficherTournoi(vue){
     ? (estPremier(vue) ? "Partager ma victoire" : "Partager mon classement")
     : "Partager mon résultat";
 
+  leTournoiSeTermine(vue);
+
   montrerMonMatch(vue);
   dessinerClassement(vue);
   dessinerLesRondes(vue);
   $("#tr-v-journal").textContent = (vue.journal || []).slice(-3).join("  ");
+}
+
+/* ═══ LA FIN D'UN TOURNOI OUVRE LE FORMULAIRE ═══════════════════════════
+   Posé le 11/09/2026 sur ordre de Pierre. C'est le meilleur moment du
+   dispositif et le seul qui ne se représente pas : on vient de voir son nom
+   au classement, on a joué toute la semaine, et c'est là qu'on accepte de
+   laisser son numéro. Une question posée à ce moment-là est reçue comme la
+   suite naturelle du jeu ; posée en plein milieu d'une partie, elle est
+   reçue comme une interruption.
+
+   TROIS GARDE-FOUS, et ils comptent tous les trois :
+     1. UNE SEULE FOIS PAR TOURNOI. L'écran interroge le serveur toutes les
+        six secondes : sans ce garde-fou, le formulaire se rouvrirait à
+        chaque battement, indéfiniment.
+     2. LES COORDONNÉES NE SE REDEMANDENT JAMAIS (règle de Pierre du
+        03/09/2026). `etat.forme` porte le repère partagé par les trois jeux :
+        qui a déjà répondu ailleurs ne revoit rien.
+     3. SEULEMENT SI L'ON A JOUÉ. Un visiteur qui regarde un classement sans
+        y figurer n'a aucune raison qu'on lui demande son numéro.
+
+   Le délai laisse voir le classement final avant que le voile ne tombe :
+   sans lui, on ne saurait jamais qui a gagné. */
+var tournoisDejaClos = {};
+
+function leTournoiSeTermine(vue){
+  if (!vue || !vue.fini || !vue.code) return;
+  if (tournoisDejaClos[vue.code]) return;
+  tournoisDejaClos[vue.code] = true;
+  if (vue.maPlace < 0) return;
+  if (!TALLY || etat.forme) return;
+
+  var moi = null, cl = vue.classement || [];
+  for (var i = 0; i < cl.length; i++) if (cl[i].place === vue.maPlace) moi = cl[i];
+  var resume = "tournoi:" + vue.nom +
+    (moi ? (":" + moi.rang + (moi.rang === 1 ? "er" : "e") + ":" + moi.g + "v") : "");
+
+  setTimeout(function(){ ouvrirFormulaire(resume); }, 2600);
 }
 
 function estPremier(vue){
@@ -2917,7 +2970,12 @@ function rapporterMaPartie(message, cellules){
     var reste = d.reste;
     dire((gagne ? "🎉 " : "") + "Comptée pour le tournoi." +
          (reste ? " Il t'en reste " + reste + "." : (reste === 0 ? " C'était ta dernière." : "")));
-    if (d.vue) tournoi = { code: mienne.code, vue: d.vue };
+    if (d.vue){
+      tournoi = { code: mienne.code, vue: d.vue };
+      /* La partie qu'on vient de rapporter a pu clore le tournoi alors que la
+         boîte est fermée : personne d'autre ne le verrait. */
+      leTournoiSeTermine(d.vue);
+    }
   }).catch(function(){
     dire("Le résultat n'a pas pu partir. Rouvre le tournoi pour réessayer.");
   });
