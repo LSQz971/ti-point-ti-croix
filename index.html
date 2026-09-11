@@ -101,7 +101,7 @@ h1{
 /* Ceux-là ne paraissent que dans une situation précise : ils prennent la
    ligne entière, à la même largeur que le reste de la barre, pour qu'on les
    remarque au lieu de les confondre avec les boutons permanents. */
-#quitter, #au-tournoi, #quitter-tournoi{
+#quitter{
   flex:0 0 100%;max-width:340px;margin:0 auto;height:44px;padding:0 12px;
 }
 select,button{font:inherit;border:0;border-radius:10px;cursor:pointer}
@@ -539,14 +539,23 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
       <button id="tournoi-ouvrir" type="button">Tournoi</button>
     </div>
     <button id="quitter" type="button" hidden>Quitter la table</button>
-    <!-- ON NE PERD JAMAIS SON TOURNOI DE VUE. Un match de tournoi se joue sur
-         une table ordinaire : sans ce bouton, le joueur qui a fini son match
-         ne sait plus par où revenir au classement. -->
-    <button id="au-tournoi" type="button" hidden>Revenir au tournoi</button>
-    <!-- LA TROISIÈME SORTIE. On ouvre un tournoi par accident, et jusqu'ici
-         la seule proposition était d'y revenir : il fallait aussi pouvoir en
-         sortir (Pierre, 11/09/2026). -->
-    <button class="bouton--pale" id="quitter-tournoi" type="button" hidden>Quitter le tournoi</button>
+    <!-- ⚠️ PLUS DE BOUTON « REVENIR AU TOURNOI » ICI (Pierre, 11/09/2026 :
+         « rejouer et revenir au tournoi c'est la même chose normalement »).
+         Il avait raison deux fois. D'abord parce que « Tournoi », le bouton
+         permanent juste à côté, ouvre exactement la même boîte, et qu'elle
+         s'ouvre d'elle-même sur le tournoi en cours quand on y est. Ensuite
+         parce que « Rejouer » relance désormais une partie DU tournoi : on
+         n'a plus besoin de repasser par le classement pour jouer la suivante.
+         La barre d'un joueur en tournoi tient donc en trois boutons :
+         Rejouer, Tournoi, et Partager quand il a gagné. -->
+    <!-- ⚠️ PLUS DE BOUTON « QUITTER LE TOURNOI » ICI (Pierre, 11/09/2026 :
+         « quitter et quitter le tournoi c'est la même chose normalement »).
+         C'était vrai : les deux appelaient la même fonction, et l'écran de
+         jeu portait donc deux fois la même sortie. Celle qu'on garde est le
+         lien « quitter » de la ligne sous le titre : il est collé au nom du
+         tournoi, donc on voit ce qu'on quitte au moment où on le quitte. Le
+         bouton de la boîte des tournois (#tr-quitter) reste, lui : il sert
+         dans un autre écran, celui du tournoi ouvert. -->
     <!-- LA VICTOIRE SE MONTRE. C'est le moteur du jeu : une partie gagnée
          qu'on affiche en statut WhatsApp emmène le lien avec elle. Il ne
          s'affiche qu'après une vraie victoire, jamais avant. -->
@@ -721,8 +730,15 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
          « Quitter le tournoi » sort vraiment du tournoi en cours, efface son
          lien de l'adresse et rend les menus du jeu. -->
     <div class="tournoi__pieds">
+      <!-- ⚠️ LES DEUX PORTES SUR L'ÉCRAN DE SORTIE (Pierre, 11/09/2026 : « je
+           peux revenir au jeu hors tournoi et comment je reviens dans le
+           tournoi ? je veux les 2 ! »). Quitter est une décision de la PAGE :
+           l'inscription, elle, vit sur l'arbitre et n'a pas bougé. Ce bouton
+           remet donc le joueur dedans d'un seul doigt, au lieu de lui faire
+           refaire tout le chemin par la liste des trois tournois. -->
+      <button id="tr-reprendre" type="button" hidden>Retourner dans le tournoi</button>
       <button class="bouton--pale" id="tr-quitter" type="button" hidden>Quitter le tournoi</button>
-      <button class="bouton--pale" id="tr-fermer" type="button">Revenir à ma partie</button>
+      <button class="bouton--pale" id="tr-fermer" type="button">Revenir au jeu</button>
     </div>
   </div>
 </div>
@@ -2366,7 +2382,43 @@ function rejouer(){
   /* En ligne, on ne rebat pas les cartes soi-même : on demande à l'arbitre,
      et les deux écrans repartent ensemble. */
   if (enLigne()){ envoyerEnLigne({ t: "relancer" }); return; }
+
+  /* ⚠️ DANS UN TOURNOI, « REJOUER » REJOUE LE TOURNOI (Pierre, 11/09/2026 :
+     « à ce moment-là j'ai 2 victoires » alors que la ligne en affichait une).
+     Il avait raison, et ce n'était pas un défaut d'affichage : rapporter une
+     partie vide `maPartieDeTournoi`, si bien que la partie suivante, lancée
+     d'un simple « Rejouer », se jouait HORS tournoi pendant que l'écran
+     continuait d'afficher le nom du tournoi, sa sortie et son classement.
+     Elle n'était comptée nulle part, ni au tournoi ni au classement de tout
+     le monde. Tant qu'il reste des parties à jouer, on la remet dedans. */
+  var sienne = maPartieDeTournoiPossible();
+  if (!maPartieDeTournoi && sienne){
+    maPartieDeTournoi = { code: tournoi.code, niveau: sienne.niveau };
+    $("#difficulte").value = sienne.niveau;
+    $("#difficulte").disabled = true;
+  }
   nouvellePartie();
+  if (maPartieDeTournoi && sienne){
+    dire(sienne.parties
+      ? ("Partie " + (sienne.jouees + 1) + " sur " + sienne.parties + " du " + sienne.nomDuTournoi + ".")
+      : ("Une partie de plus pour " + sienne.nomDuTournoi + "."));
+  }
+}
+
+/* UNE PARTIE DU TOURNOI EST-ELLE COMMENCÉE ET PAS ENCORE FINIE ? C'est ce
+   qui décide entre reprendre et rebattre. */
+function enCoursDeTournoi(){ return !!maPartieDeTournoi && !fini; }
+
+/* LA PARTIE DE TOURNOI QUE JE PEUX ENCORE JOUER, ou rien. Trois conditions,
+   toutes vérifiées auprès de la dernière vue rendue par l'arbitre : je suis
+   dans un tournoi contre l'ordinateur, il n'est pas terminé, et mon quota
+   n'est pas épuisé (le Défi du vendredi n'en a aucun, `reste` y vaut null). */
+function maPartieDeTournoiPossible(){
+  var v = (tournoi && tournoi.vue) ? tournoi.vue : null;
+  if (!v || v.fini || !v.maPartie) return null;
+  var mp = v.maPartie;
+  if (mp.reste !== null && mp.reste !== undefined && mp.reste <= 0) return null;
+  return { niveau: mp.niveau, jouees: mp.jouees, parties: mp.parties, nomDuTournoi: v.nom };
 }
 
 
@@ -2463,8 +2515,6 @@ function reprendreMonTournoi(){
       var vue = d && d.vue;
       if (!vue || vue.fini || vue.maPlace < 0){ marquerMonTournoi(null); return; }
       tournoi = { code: vue.code, vue: vue };
-      $("#au-tournoi").hidden = false;
-      $("#quitter-tournoi").hidden = false;
       direQuiJeSuis();
     })
     .catch(function(){});
@@ -2608,8 +2658,9 @@ function ouvrirTournoi(){
 /* SORTIE 1 : on ferme la boîte, et rien ne change. */
 function fermerTournoi(){
   $("#tournoi").hidden = true;
-  $("#tr-fermer").textContent = "Revenir à ma partie";
+  $("#tr-fermer").textContent = "Revenir au jeu";
   $("#tr-retour").hidden = false;
+  $("#tr-reprendre").hidden = true;
   clearInterval(sondage); sondage = null;
   /* On vient de lire son classement de sortie : c'est maintenant que la
      question se pose, pas par-dessus le tableau. */
@@ -2618,6 +2669,32 @@ function fermerTournoi(){
     formulaireEnAttente = null;
     if (TALLY && !etat.forme) setTimeout(function(){ ouvrirFormulaire(r); }, 260);
   }
+}
+
+/* LE CHEMIN DU RETOUR, juste après la sortie. Quitter n'efface rien chez
+   l'arbitre : la place, les parties jouées et le rang y restent, c'est la
+   page seule qui avait lâché le tournoi. Revenir ne coûte donc qu'une
+   relecture de la vue, et l'on retrouve tout où on l'avait laissé. */
+function retournerDansLeTournoi(){
+  var code = dernierTournoi && dernierTournoi.code;
+  if (!code || !SERVEUR) return;
+  var b = $("#tr-reprendre");
+  b.disabled = true;
+  fetch(SERVEUR + "/tournoi/" + code + "?jeton=" + encodeURIComponent(monJeton()))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      b.disabled = false;
+      var vue = d && d.vue;
+      if (!vue){ $("#tr-v-journal").textContent = "Ce tournoi ne répond plus."; return; }
+      dernierTournoi = null;
+      $("#tr-retour").hidden = false;
+      $("#tr-fermer").textContent = "Revenir au jeu";
+      afficherTournoi(vue);
+      armerLeSondage();
+      direQuiJeSuis();
+      dire("Te revoilà dans " + vue.nom + ".");
+    })
+    .catch(function(){ b.disabled = false; dire("Le serveur ne répond pas."); });
 }
 
 /* SORTIE 2 : ON QUITTE VRAIMENT LE TOURNOI EN COURS (Pierre, 11/09/2026 :
@@ -2642,8 +2719,6 @@ function quitterLeTournoi(){
     reglagesAvantLeTournoi = null;
   }
   try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
-  $("#au-tournoi").hidden = true;
-  $("#quitter-tournoi").hidden = true;
   clearInterval(sondage); sondage = null;
   if (enLigne()) quitterLaTable();
 
@@ -2670,6 +2745,7 @@ function quitterLeTournoi(){
     $("#tr-vivant").hidden = false;
     $("#tr-retour").hidden = true;       /* il vient de sortir, il n'y revient pas */
     $("#tr-quitter").hidden = true;      /* c'est fait */
+    $("#tr-reprendre").hidden = false;   /* et l'on peut y retourner */
     $("#tr-v-lancer").hidden = true;
     $("#tr-v-clore").hidden = true;
     $("#tr-v-partage").hidden = true;
@@ -2817,6 +2893,7 @@ function montrerLAccueil(){
   $("#tr-vivant").hidden = true;
   $("#tr-neuf").hidden = true;
   $("#tr-quitter").hidden = true;
+  $("#tr-reprendre").hidden = true;
   dessinerLesCartes();
   dessinerLeClassementGeneral();
   remonterLaBoite();
@@ -3011,7 +3088,7 @@ function afficherTournoi(vue){
   $("#tr-neuf").hidden = true;
   $("#tr-vivant").hidden = false;
   $("#tr-quitter").hidden = false;
-  $("#quitter-tournoi").hidden = false;
+  $("#tr-reprendre").hidden = true;
   /* ON NE SE SOUVIENT QUE DES TOURNOIS OÙ L'ON JOUE VRAIMENT : regarder un
      classement sans y figurer ne doit pas coller le jeu à ce tournoi. */
   marquerMonTournoi(vue.maPlace >= 0 && !vue.fini ? vue.code : null);
@@ -3170,8 +3247,21 @@ function montrerMonMatch(vue){
                                           : ("Tu as joué " + q.jouees + (q.jouees > 1 ? " parties." : " partie."))) + "</b>" +
         "<span>Contre l'ordinateur, en " + q.niveau +
         ". Le niveau est imposé, il est le même pour tout le monde.</span>" +
-        '<button id="tr-jouer" type="button">Jouer ma partie</button>';
-      $("#tr-jouer").addEventListener("click", function(){ jouerMaPartie(vue); });
+        '<button id="tr-jouer" type="button">' +
+        (enCoursDeTournoi() ? "Reprendre ma partie" : "Jouer ma partie") + "</button>";
+      /* ⚠️ DEUX BOUTONS NE DISENT JAMAIS LE MÊME MOT (Pierre, 11/09/2026 :
+         « jouer ma partie et revenir à ma partie c'est la même chose
+         normalement »). Il lisait deux fois « ma partie » sur le même écran,
+         et ce n'étaient pourtant pas les mêmes gestes : l'un REPREND la
+         partie commencée, l'autre en rebat une neuve, ce qui efface la
+         grille en cours. Un seul mot par geste, donc : tant qu'une partie du
+         tournoi est en cours, ce bouton la reprend, et il ne propose d'en
+         lancer une que lorsqu'il n'y en a plus. Le pied de la boîte, lui, ne
+         parle plus de « ma partie » du tout : il dit « Revenir au jeu ». */
+      $("#tr-jouer").addEventListener("click", function(){
+        if (enCoursDeTournoi()){ fermerTournoi(); return; }
+        jouerMaPartie(vue);
+      });
     }
     return;
   }
@@ -3361,8 +3451,6 @@ function jouerMaPartie(vue){
   $("#difficulte").disabled = true;
   maPartieDeTournoi = { code: tournoi.code, niveau: vue.maPartie.niveau };
   $("#mode").value = "ordinateur";
-  $("#au-tournoi").hidden = false;
-  $("#quitter-tournoi").hidden = false;
   direQuiJeSuis();
   nouvellePartie();
   dire(vue.maPartie.parties
@@ -3424,7 +3512,6 @@ function jouerMonMatch(m){
   $("#tournoi").hidden = true;
   clearInterval(sondage); sondage = null;
   $("#salon-nom").value = nom;
-  $("#quitter-tournoi").hidden = false;
   connecter(m.table, nom, m.manches);
 }
 
@@ -3433,7 +3520,7 @@ function brancherLesTournois(){
   $("#tournoi-ouvrir").addEventListener("click", ouvrirTournoi);
   $("#tr-fermer").addEventListener("click", fermerTournoi);
   $("#tr-quitter").addEventListener("click", quitterLeTournoi);
-  $("#quitter-tournoi").addEventListener("click", quitterLeTournoi);
+  $("#tr-reprendre").addEventListener("click", retournerDansLeTournoi);
   $("#tr-retour").addEventListener("click", montrerLAccueil);
   $("#tr-neuf-retour").addEventListener("click", montrerLAccueil);
   $("#tr-creer").addEventListener("click", creerTournoi);
@@ -3456,10 +3543,6 @@ function brancherLesTournois(){
       if (d.erreur){ $("#tr-v-journal").textContent = d.erreur; return; }
       if (d.vue) afficherTournoi(d.vue);
     }).catch(function(){ b.disabled = false; dire("Le serveur ne répond pas."); });
-  });
-  $("#au-tournoi").addEventListener("click", function(){
-    if (enLigne()) quitterLaTable();
-    ouvrirTournoi();
   });
   $("#tr-v-copier").addEventListener("click", function(){
     var champ = $("#tr-v-url"), bouton = this;
