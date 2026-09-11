@@ -2364,6 +2364,9 @@ var reglagesAvantLeTournoi = null;   /* ce que le joueur avait choisi avant d'en
 /* Le tournoi qu'on vient de quitter : il reste sous les yeux le temps qu'on
    lise son classement et qu'on le partage. */
 var dernierTournoi = null;
+/* Le formulaire à ouvrir dès que le joueur referme l'écran de son classement.
+   Vide le reste du temps. */
+var formulaireEnAttente = null;
 
 /* Des noms tout faits pour le tournoi an fanmi : c'est la friction du champ
    vide qui fait abandonner, pas le manque d'idées. Aucun ne reprend le nom
@@ -2467,6 +2470,13 @@ function ouvrirTournoi(){
 function fermerTournoi(){
   $("#tournoi").hidden = true;
   clearInterval(sondage); sondage = null;
+  /* On vient de lire son classement de sortie : c'est maintenant que la
+     question se pose, pas par-dessus le tableau. */
+  if (formulaireEnAttente){
+    var r = formulaireEnAttente;
+    formulaireEnAttente = null;
+    if (TALLY && !etat.forme) setTimeout(function(){ ouvrirFormulaire(r); }, 260);
+  }
 }
 
 /* SORTIE 2 : ON QUITTE VRAIMENT LE TOURNOI EN COURS (Pierre, 11/09/2026 :
@@ -2564,9 +2574,14 @@ function quitterLeTournoi(){
   if (jetais && TALLY && !etat.forme){
     var moi2 = null, cl2 = vue.classement || [];
     for (var k = 0; k < cl2.length; k++) if (cl2[k].place === vue.maPlace) moi2 = cl2[k];
-    var resume = "tournoi-quitte:" + vue.nom +
+    /* ⚠️ LE FORMULAIRE ATTEND QU'ON AIT LU SON CLASSEMENT. Il s'ouvrait
+       900 ms après avoir quitté, c'est-à-dire PAR-DESSUS le tableau qu'on
+       venait justement de montrer : on ne voyait plus son rang (constaté le
+       11/09/2026). Il se déclenche maintenant au moment où l'on referme cet
+       écran, par « Revenir à ma partie ». Rien n'est caché, et la question
+       arrive quand la lecture est finie. */
+    formulaireEnAttente = "tournoi-quitte:" + vue.nom +
       (moi2 ? (":" + moi2.rang + (moi2.rang === 1 ? "er" : "e") + ":" + moi2.g + "v") : "");
-    setTimeout(function(){ ouvrirFormulaire(resume); }, 900);
   }
 
   dire("Tu as quitté le tournoi. Te voilà sur une partie ordinaire.");
