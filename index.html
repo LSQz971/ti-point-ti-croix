@@ -329,6 +329,10 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
 .tournoi__pieds{display:flex;flex-direction:column;gap:8px;margin-top:12px}
 .tournoi__rappel{border-top:1px dashed rgba(255,255,255,.18);margin-top:4px}
 .tournoi__vide{font-size:13px;opacity:.7;padding:10px 2px;line-height:1.5}
+/* Le bilan de sortie : le chiffre des victoires se lit d'un coup d'œil,
+   c'est lui qu'on est venu chercher. */
+.tournoi__bilan{font-size:14px;opacity:.95}
+.tournoi__bilan b{font-size:20px;font-weight:800;color:#ffd666}
 .tournoi__partager{
   display:block;width:100%;margin-top:10px;background:#25D366;color:#062011;
 }
@@ -2469,6 +2473,8 @@ function ouvrirTournoi(){
 /* SORTIE 1 : on ferme la boîte, et rien ne change. */
 function fermerTournoi(){
   $("#tournoi").hidden = true;
+  $("#tr-fermer").textContent = "Revenir à ma partie";
+  $("#tr-retour").hidden = false;
   clearInterval(sondage); sondage = null;
   /* On vient de lire son classement de sortie : c'est maintenant que la
      question se pose, pas par-dessus le tableau. */
@@ -2537,12 +2543,23 @@ function quitterLeTournoi(){
     $("#tr-v-titre").textContent = vue.nom;
     $("#tr-v-sous").textContent = "Tu quittes ce tournoi.";
     $("#tr-v-mien").hidden = false;
+    /* ⚠️ LE NOMBRE DE VICTOIRES S'AFFICHE TOUJOURS, MÊME À ZÉRO (Pierre,
+       11/09/2026 : « où est mon nombre de victoires ? »). Je l'escamotais
+       quand il valait zéro, en croyant bien faire : le résultat est qu'on
+       sortait d'un tournoi sans jamais voir son chiffre. Zéro victoire est un
+       chiffre, et c'est celui qu'on cherche à faire monter. */
+    var vict = m ? m.g : 0, parts = m ? m.j : 0;
     $("#tr-v-mien").innerHTML =
       "<b>" + (m ? ("Tu finis " + m.rang + (m.rang === 1 ? "er" : "e")) : "Tu quittes le tournoi") + ".</b>" +
-      "<span>" + (m && m.g
-        ? (m.g + (m.g > 1 ? " victoires" : " victoire") + " sur " + m.j + (m.j > 1 ? " parties jouées." : " partie jouée."))
-        : "Ton nom reste au classement de tout le monde.") + "</span>";
+      '<span class="tournoi__bilan"><b>' + vict + "</b> " +
+      (vict > 1 ? "victoires" : "victoire") + " sur " + parts + " " +
+      (parts > 1 ? "parties jouées" : "partie jouée") + "</span>" +
+      "<span>Ton nom reste au classement de tout le monde.</span>";
     $("#tr-v-partager").hidden = false;
+    /* LE BOUTON DE SORTIE DIT OÙ IL MÈNE. « Revenir à ma JEU » ne disait pas
+       qu'on sortait du tournoi, et l'on cherchait un autre bouton qui
+       n'existait pas (Pierre, 11/09/2026). */
+    $("#tr-fermer").textContent = "Revenir au jeu, hors tournoi";
     $("#tr-v-partager").textContent = (m && m.g > 1) ? "Partager mes victoires"
                                     : ((m && m.g === 1) ? "Partager ma victoire" : "Partager mon résultat");
     dessinerClassement(vue);
