@@ -2379,6 +2379,45 @@ var TR_CARTES = [
     quoi: "Contre l'ordinateur : le plus de victoires dans la journée l'emporte." }
 ];
 
+/* ═══ LE JEU SE SOUVIENT DU TOURNOI OÙ L'ON EST ═════════════════════════
+   Posé le 11/09/2026. Le Défi du vendredi et la Coupe des collègues sont
+   publics : ils n'ont pas de lien dans l'adresse, contrairement au tournoi an
+   fanmi. Conséquence, jusqu'ici : **un simple rechargement de page faisait
+   sortir du tournoi sans rien cliquer**, les boutons « Revenir au tournoi »
+   et « Quitter le tournoi » disparaissaient, et l'on se retrouvait sur une
+   partie ordinaire sans comprendre pourquoi. C'est exactement ce que Pierre
+   a constaté et signalé trois fois.
+   Le code du tournoi est donc gardé dans le téléphone, et repris au
+   démarrage. Il ne tient que tant que le tournoi vit : s'il est clos, ou si
+   l'on n'y figure plus, on l'oublie. */
+function marquerMonTournoi(code){
+  try {
+    if (code) localStorage.setItem("tptc-tournoi", code);
+    else localStorage.removeItem("tptc-tournoi");
+  } catch (e) {}
+}
+function monTournoiGarde(){
+  try { return localStorage.getItem("tptc-tournoi") || null; } catch (e) { return null; }
+}
+
+/* AU DÉMARRAGE : on reprend le tournoi de la dernière fois, sans ouvrir la
+   boîte. On rend seulement ses deux boutons, pour que le joueur voie tout de
+   suite qu'il y est encore et qu'il peut en sortir. */
+function reprendreMonTournoi(){
+  var code = trCode() || monTournoiGarde();
+  if (!code || !SERVEUR) return;
+  fetch(SERVEUR + "/tournoi/" + code + "?jeton=" + encodeURIComponent(monJeton()))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var vue = d && d.vue;
+      if (!vue || vue.fini || vue.maPlace < 0){ marquerMonTournoi(null); return; }
+      tournoi = { code: vue.code, vue: vue };
+      $("#au-tournoi").hidden = false;
+      $("#quitter-tournoi").hidden = false;
+    })
+    .catch(function(){});
+}
+
 function trCode(){
   var m = (location.hash || "").match(/^#tr=([a-z0-9]{4,12})$/i);
   return m ? m[1].toLowerCase() : null;
@@ -2440,6 +2479,7 @@ function quitterLeTournoi(){
 
   tournoi = null;
   maPartieDeTournoi = null;
+  marquerMonTournoi(null);      /* on ne le reprendra pas au prochain chargement */
   $("#difficulte").disabled = false;
   /* SA TABLE À LUI REVIENT. C'est cela, « revenir sur une table hors
      tournoi » : les réglages qu'il avait choisis avant d'y entrer. */
@@ -2738,6 +2778,9 @@ function afficherTournoi(vue){
   $("#tr-vivant").hidden = false;
   $("#tr-quitter").hidden = false;
   $("#quitter-tournoi").hidden = false;
+  /* ON NE SE SOUVIENT QUE DES TOURNOIS OÙ L'ON JOUE VRAIMENT : regarder un
+     classement sans y figurer ne doit pas coller le jeu à ce tournoi. */
+  marquerMonTournoi(vue.maPlace >= 0 && !vue.fini ? vue.code : null);
 
   $("#tr-v-titre").textContent = vue.nom;
   $("#tr-v-sous").textContent = trResume(vue);
@@ -3199,6 +3242,7 @@ function brancherLesTournois(){
      PREMIÈRE occurrence de la fermeture d'une telle fonction. Une de plus
      dans le fichier, et les deux bancs de tests ne mesurent plus rien. */
   poserLesNomsTouFaits();
+  reprendreMonTournoi();
 }
 
 function demarrer(){
