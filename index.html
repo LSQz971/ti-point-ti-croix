@@ -67,15 +67,6 @@ h1{
   color:var(--or);font:inherit;letter-spacing:0;text-transform:none;
   text-decoration:underline;cursor:pointer;box-shadow:none;
 }
-.moi__forme{display:flex;gap:6px;align-items:center;flex:0 0 auto}
-.moi__forme input{
-  width:150px;padding:6px 9px;border-radius:8px;border:1px solid var(--trait);
-  background:rgba(0,0,0,.18);color:var(--encre);font:inherit;
-}
-.moi__forme button{
-  width:auto;height:auto;margin:0;padding:6px 12px;font:inherit;
-  letter-spacing:.04em;
-}
 
 /* ══ LA BARRE DE RÉGLAGES ════════════════════════════════════════════════
    Refaite le 11/09/2026. Elle donnait trois réglages centrés de trois
@@ -505,11 +496,6 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
        quatre réponses : le nom, les victoires, le tournoi, et sa sortie. -->
   <div class="moi" id="moi">
     <span class="moi__qui" id="moi-qui"></span>
-    <form class="moi__forme" id="moi-forme" autocomplete="off" hidden>
-      <input id="moi-saisie" type="text" maxlength="18" placeholder="Ton prénom"
-             aria-label="Ton nom de joueur">
-      <button type="submit">OK</button>
-    </form>
   </div>
 
   <div class="reglages">
@@ -2562,12 +2548,16 @@ function rafraichirMonBilan(){
     }).catch(function(){});
 }
 
+/* ⚠️ AUCUN CHAMP DE NOM ICI (Pierre, 11/09/2026 : « tu entres ton nom quand
+   tu arrives dans le tournoi, pourquoi un bouton pour changer de nom ? »).
+   Il a raison : le champ existe déjà en haut de la boîte des tournois, et
+   deux endroits pour dire la même chose, c'est deux endroits à tenir et un
+   joueur qui se demande lequel fait foi. On l'emmène donc au seul champ qui
+   existe, et cette ligne ne fait plus qu'AFFICHER. */
 function ouvrirMaSaisie(){
-  var f = $("#moi-forme"), c = $("#moi-saisie");
-  f.hidden = false;
-  c.value = monNom();
-  c.focus();
-  try { c.select(); } catch (e) {}
+  ouvrirTournoi();
+  var c = $("#tr-nom");
+  if (c){ try { c.focus(); c.select(); } catch (e) {} }
 }
 
 function direQuiJeSuis(){
@@ -2584,8 +2574,7 @@ function direQuiJeSuis(){
      quoi ce bouton changer ? il sert à rien ! »). Il disait à voix haute ce
      que le nom fait déjà : c'est LE NOM qu'on touche pour le changer, et un
      mot de plus sur la ligne ne servait qu'à l'encombrer. */
-  var html = '<button class="moi__lien moi__nom" id="moi-changer" type="button">' +
-             echapper(n) + "</button>";
+  var html = '<span class="moi__nom">' + echapper(n) + "</span>";
   /* ⚠️ LE CHIFFRE S'AFFICHE MÊME À ZÉRO. Zéro victoire est un chiffre, et
      c'est celui qu'on cherche à faire monter. */
   if (monBilan){
@@ -2601,7 +2590,6 @@ function direQuiJeSuis(){
             ' <button class="moi__lien" id="moi-quitter" type="button">quitter</button>';
   }
   qui.innerHTML = html;
-  $("#moi-changer").addEventListener("click", ouvrirMaSaisie);
   if ($("#moi-quitter")) $("#moi-quitter").addEventListener("click", quitterLeTournoi);
 }
 
@@ -3495,10 +3483,6 @@ function brancherLesTournois(){
      dans le fichier, et les deux bancs de tests ne mesurent plus rien. */
   /* LA LIGNE « QUI JE SUIS », branchée et rendue tout de suite : elle est
      visible avant même que le serveur ait répondu. */
-  $("#moi-forme").addEventListener("submit", function(e){
-    e.preventDefault();
-    if (poserMonNom($("#moi-saisie").value)) $("#moi-forme").hidden = true;
-  });
   direQuiJeSuis();
   rafraichirMonBilan();
 
