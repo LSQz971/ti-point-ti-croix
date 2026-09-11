@@ -642,6 +642,30 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
          lorsqu'un nom déjà pris est réclamé : celui qui revient donne son
          code et retrouve sa ligne, celui qui ne l'a pas choisit un autre
          nom. Le reste du temps, personne ne le voit ni n'a à le taper. -->
+    <!-- ⚠️ LE JOUEUR DOIT SAVOIR QU'IL A UN CODE, ET LE NOTER (Pierre,
+         11/09/2026 : « il faut que le code de reprise soit enregistré par le
+         joueur ! le joueur doit impérativement savoir ça »). Une note en
+         petit sous un champ ne se lit pas : le code s'annonce donc dans un
+         encart qui occupe l'écran au moment où le nom est créé, avec de quoi
+         le copier et de quoi se l'envoyer, et il ne se ferme que lorsque le
+         joueur dit lui-même qu'il l'a noté. -->
+    <div class="salon__convie" id="tr-code-neuf" hidden>
+      <b>Note ton code de reprise.</b>
+      <span>C'est lui qui te rendra ton nom et tes victoires si tu changes de
+        téléphone ou si ton navigateur efface ses données. Sans lui, ce nom
+        est perdu pour toi : personne ne peut le reprendre, pas même toi.</span>
+      <div class="tournoi__partage" style="margin-top:6px">
+        <input id="tr-code-neuf-val" type="text" readonly aria-label="Ton code de reprise">
+        <button id="tr-code-copier" type="button">Copier</button>
+      </div>
+      <button id="tr-code-garder" type="button">M'envoyer mon code</button>
+      <button class="bouton--pale" id="tr-code-ok" type="button">J'ai noté mon code</button>
+    </div>
+
+    <!-- ET IL RESTE SOUS LES YEUX : sur son propre téléphone, le joueur peut
+         relire son code quand il veut, sans rien redemander à personne. -->
+    <p class="salon__note" id="tr-code-rappel" hidden></p>
+
     <label class="salon__nom" id="tr-code-boite" hidden style="margin-bottom:4px">Ton code de reprise
       <input id="tr-code" type="text" maxlength="8" placeholder="six caractères" autocomplete="off">
       <span class="salon__note-nom" id="tr-code-note">Ce nom est déjà pris. Donne son code pour le reprendre, ou choisis un autre nom.</span>
@@ -2598,13 +2622,17 @@ function poserMonNom(n){
            pas un nom qui n'est pas au tableau. */
         if (d && d.erreur){ nomDejaPris(d); return; }
         if (d && d.code){
+          var neuf = (monCode() !== String(d.code));
           garderMonCode(d.code);
           var boite = $("#tr-code-boite");
           if (boite) boite.hidden = true;
           if ($("#tr-nom-note")){
-            $("#tr-nom-note").textContent = "Ton code de reprise : " + d.code +
-              ". Note-le : il te rendra ton nom sur un autre téléphone.";
+            $("#tr-nom-note").textContent = "Les autres joueurs le verront dans le classement.";
           }
+          /* ON NE L'ANNONCE QU'UNE FOIS, celle où il change : sinon l'encart
+             reviendrait à chaque frappe dans le champ du nom. */
+          if (neuf) annoncerMonCode(d.code);
+          else rappelerMonCode();
         }
         rafraichirMonBilan();
       }).catch(function(){});
@@ -2620,6 +2648,30 @@ function monCode(){
 function garderMonCode(c){
   if (!c) return;
   try { localStorage.setItem("tptc-code", String(c)); } catch (e) {}
+}
+
+/* LE CODE VIENT D'ÊTRE DONNÉ : on l'annonce en grand, et l'encart ne se ferme
+   que lorsque le joueur dit qu'il l'a noté. */
+function annoncerMonCode(code){
+  var b = $("#tr-code-neuf");
+  if (!b) return;
+  if ($("#tournoi").hidden) ouvrirTournoi();
+  $("#tr-code-neuf-val").value = code;
+  b.hidden = false;
+  var boite = $("#tr-code-boite");
+  if (boite) boite.hidden = true;
+  remonterLaBoite();
+  rappelerMonCode();
+}
+
+/* LE RAPPEL PERMANENT, sous le champ du nom. */
+function rappelerMonCode(){
+  var r = $("#tr-code-rappel");
+  if (!r) return;
+  var c = monCode();
+  if (!c || !monNom()){ r.hidden = true; return; }
+  r.textContent = "Ton code de reprise : " + c + " (garde-le, il te rendra ton nom sur un autre téléphone).";
+  r.hidden = false;
 }
 
 /* CE NOM EST DÉJÀ PRIS : on ouvre la case du code, et on ne garde surtout pas
@@ -2703,6 +2755,7 @@ function ouvrirTournoi(){
   } catch (e) {}
   chargerLesTournois();
   armerLeSondage();
+  rappelerMonCode();
 }
 
 /* SORTIE 1 : on ferme la boîte, et rien ne change. */
@@ -3619,6 +3672,32 @@ function brancherLesTournois(){
   $("#tr-neuf-retour").addEventListener("click", montrerLAccueil);
   $("#tr-creer").addEventListener("click", creerTournoi);
   $("#tr-rejoindre").addEventListener("click", rejoindreTournoi);
+  $("#tr-code-ok").addEventListener("click", function(){
+    $("#tr-code-neuf").hidden = true;
+    rappelerMonCode();
+  });
+  $("#tr-code-copier").addEventListener("click", function(){
+    var champ = $("#tr-code-neuf-val"), bouton = this;
+    champ.select();
+    var fait = function(){
+      bouton.textContent = "Copié !";
+      setTimeout(function(){ bouton.textContent = "Copier"; }, 1800);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(champ.value).then(fait, function(){
+        try { document.execCommand("copy"); fait(); } catch (e) {}
+      });
+    } else { try { document.execCommand("copy"); fait(); } catch (e) {} }
+  });
+  /* SE L'ENVOYER, C'EST LE GARDER. Le jeu vit sur WhatsApp : un message qu'on
+     s'adresse à soi-même est le carnet de notes de tout le monde. */
+  $("#tr-code-garder").addEventListener("click", function(){
+    var texte = "Mon code de reprise Ti Point Ti Croix : " + monCode() +
+                " (il me rend mon nom " + (monNom() || "") + " et mes victoires). " +
+                adressePublique();
+    if (navigator.share){ navigator.share({ text: texte }).catch(function(){}); return; }
+    window.open("https://wa.me/?text=" + encodeURIComponent(texte), "_blank", "noopener");
+  });
   $("#tr-code").addEventListener("change", function(){
     garderMonCode((this.value || "").trim());
     var n = ($("#tr-nom").value || "").trim();
