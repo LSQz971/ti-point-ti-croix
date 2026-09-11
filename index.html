@@ -2361,6 +2361,9 @@ var tousLesTournois = null;      /* la dernière réponse de /tournois */
 var sondage = null;              /* le rappel régulier, tant que la boîte est ouverte */
 var maPartieDeTournoi = null;    /* la partie de tournoi en cours, contre l'ordinateur */
 var reglagesAvantLeTournoi = null;   /* ce que le joueur avait choisi avant d'entrer */
+/* Le tournoi qu'on vient de quitter : il reste sous les yeux le temps qu'on
+   lise son classement et qu'on le partage. */
+var dernierTournoi = null;
 
 /* Des noms tout faits pour le tournoi an fanmi : c'est la friction du champ
    vide qui fait abandonner, pas le manque d'idées. Aucun ne reprend le nom
@@ -2490,7 +2493,6 @@ function quitterLeTournoi(){
   try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
   $("#au-tournoi").hidden = true;
   $("#quitter-tournoi").hidden = true;
-  $("#tournoi").hidden = true;
   clearInterval(sondage); sondage = null;
   if (enLigne()) quitterLaTable();
 
@@ -2499,9 +2501,48 @@ function quitterLeTournoi(){
      n'est dans aucun tournoi, et il doit être exactement celui-là. */
   nouvellePartie();
 
-  /* ⚠️ LE PARTAGE VIENT APRÈS LA PARTIE NEUVE, ET PAS AVANT : la relance
-     efface le bouton de partage de la victoire précédente. Posé dans cet
-     ordre, il porte les victoires du tournoi qu'on vient de quitter. */
+  /* ═══ ON NE PART PAS SANS AVOIR VU SON CLASSEMENT ═══════════════════════
+     Posé le 11/09/2026, après trois demandes de Pierre. Quitter un tournoi
+     fermait la boîte sur-le-champ : on sortait sans jamais voir où l'on avait
+     fini, ce qui est précisément le seul moment où ce chiffre intéresse
+     quelqu'un. La boîte RESTE donc ouverte sur un dernier écran : le rang,
+     les victoires, le tableau entier, et le bouton pour le partager. La
+     partie neuve est déjà en place derrière. */
+  if (jetais){
+    dernierTournoi = vue;
+    var m = null, cl0 = vue.classement || [];
+    for (var z = 0; z < cl0.length; z++) if (cl0[z].place === vue.maPlace) m = cl0[z];
+
+    $("#tournoi").hidden = false;
+    $("#tr-accueil").hidden = true;
+    $("#tr-neuf").hidden = true;
+    $("#tr-vivant").hidden = false;
+    $("#tr-retour").hidden = true;       /* il vient de sortir, il n'y revient pas */
+    $("#tr-quitter").hidden = true;      /* c'est fait */
+    $("#tr-v-lancer").hidden = true;
+    $("#tr-v-clore").hidden = true;
+    $("#tr-v-partage").hidden = true;
+    $("#tr-v-entrer").hidden = true;
+    $("#tr-v-reste").hidden = true;
+    $("#tr-v-titre").textContent = vue.nom;
+    $("#tr-v-sous").textContent = "Tu quittes ce tournoi.";
+    $("#tr-v-mien").hidden = false;
+    $("#tr-v-mien").innerHTML =
+      "<b>" + (m ? ("Tu finis " + m.rang + (m.rang === 1 ? "er" : "e")) : "Tu quittes le tournoi") + ".</b>" +
+      "<span>" + (m && m.g
+        ? (m.g + (m.g > 1 ? " victoires" : " victoire") + " sur " + m.j + (m.j > 1 ? " parties jouées." : " partie jouée."))
+        : "Ton nom reste au classement de tout le monde.") + "</span>";
+    $("#tr-v-partager").hidden = false;
+    $("#tr-v-partager").textContent = (m && m.g > 1) ? "Partager mes victoires"
+                                    : ((m && m.g === 1) ? "Partager ma victoire" : "Partager mon résultat");
+    dessinerClassement(vue);
+    dessinerLesRondes(vue);
+    $("#tr-v-journal").textContent = (vue.journal || []).slice(-3).join("  ");
+    remonterLaBoite();
+  } else {
+    $("#tournoi").hidden = true;
+  }
+
   if (jetais){
     var moi = null, cl = vue.classement || [];
     for (var i = 0; i < cl.length; i++) if (cl[i].place === vue.maPlace) moi = cl[i];
@@ -3084,7 +3125,10 @@ function lienDuJeu(){
 }
 
 function partagerMonTournoi(){
-  var texte = tournoi && tournoi.vue ? texteDePartage(tournoi.vue) : "";
+  /* `dernierTournoi` prend le relais après qu'on a quitté : on vient
+     justement de lui montrer son classement, il doit pouvoir le partager. */
+  var v = (tournoi && tournoi.vue) ? tournoi.vue : dernierTournoi;
+  var texte = v ? texteDePartage(v) : "";
   if (!texte) return;
   /* Le partage NATIF d'abord : c'est lui, et lui seul, qui donne accès au
      STATUT WhatsApp sur téléphone. Le lien wa.me n'ouvre qu'une discussion. */
