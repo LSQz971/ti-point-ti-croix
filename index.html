@@ -262,6 +262,40 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
 }
 .tournoi__score b{font-size:22px;font-variant-numeric:tabular-nums}
 .tournoi__score small{font-size:9px;text-transform:uppercase;letter-spacing:.05em;opacity:.6;margin-top:2px}
+/* ══ LES TROIS CARTES DE TOURNOI, ajoutées le 11/09/2026 ═════════════════
+   Une carte par tournoi, son nom, ce qu'il est en une phrase, et l'état du
+   cycle. On tape, on entre. C'est le même geste que les gros boutons de
+   papergames : la page se lit d'un coup d'œil, sans un seul déroulant. */
+.tournoi__cartes{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.tournoi__carte{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;
+  font:inherit;padding:11px 12px;border-radius:12px;color:inherit;
+  border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.24);
+  /* La règle générale met TOUS les boutons du jeu en capitales espacées :
+     elle va aux boutons d'action, pas à une carte qui porte deux phrases.
+     En capitales, la description devient illisible sur un téléphone. */
+  text-transform:none;letter-spacing:normal;font-weight:400;box-shadow:none;
+}
+.tournoi__carte:hover{border-color:rgba(255,214,102,.45);background:rgba(0,0,0,.32)}
+.tournoi__carte--mien{border-color:rgba(255,214,102,.5);background:rgba(255,214,102,.12)}
+.tournoi__cIcone{flex:0 0 auto;font-size:22px;line-height:1}
+.tournoi__cTexte{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.tournoi__cTexte b{font-size:15px;line-height:1.2}
+.tournoi__cTexte em{font-style:normal;font-size:11.5px;opacity:.7;line-height:1.35}
+.tournoi__cTexte i{font-style:normal;font-size:11px;opacity:.9;color:#ffd666}
+.tournoi__cFleche{flex:0 0 auto;opacity:.45;font-size:18px}
+.tournoi__retour{
+  font:inherit;font-size:13px;padding:4px 0;margin-bottom:6px;cursor:pointer;
+  background:none;border:0;color:inherit;opacity:.75;
+  text-transform:none;letter-spacing:normal;font-weight:500;box-shadow:none;
+}
+.tournoi__reste{font-size:11.5px;opacity:.75}
+.tournoi__pieds{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.tournoi__rappel{border-top:1px dashed rgba(255,255,255,.18);margin-top:4px}
+.tournoi__vide{font-size:13px;opacity:.7;padding:10px 2px;line-height:1.5}
+.tournoi__partager{
+  display:block;width:100%;margin-top:10px;background:#25D366;color:#062011;
+}
 .tournoi__wa{
   display:block;text-align:center;padding:10px;border-radius:10px;font-size:14px;
   font-weight:600;text-decoration:none;background:#25D366;color:#062011;
@@ -389,7 +423,6 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
       <select id="mode">
         <option value="ordinateur" selected>Contre l'ordinateur</option>
         <option value="ligne">Contre des joueurs en ligne</option>
-        <option value="tournoi">Tournoi</option>
       </select>
     </label>
     <label>Difficulté
@@ -409,11 +442,20 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
       </select>
     </label>
     <button id="rejouer" type="button">Rejouer</button>
+    <!-- LE TOURNOI EST UNE ACTION, PAS UN RÉGLAGE (Pierre, 11/09/2026) : il
+         sort du menu « Mode » et vient se poser à côté de « Rejouer ». C'est
+         lui qui fait circuler le jeu sur WhatsApp, il ne se cache pas au
+         fond d'un déroulant. -->
+    <button id="tournoi-ouvrir" type="button">Tournoi</button>
     <button id="quitter" type="button" hidden>Quitter la table</button>
     <!-- ON NE PERD JAMAIS SON TOURNOI DE VUE. Un match de tournoi se joue sur
          une table ordinaire : sans ce bouton, le joueur qui a fini son match
          ne sait plus par où revenir au classement. -->
     <button id="au-tournoi" type="button" hidden>Revenir au tournoi</button>
+    <!-- LA TROISIÈME SORTIE. On ouvre un tournoi par accident, et jusqu'ici
+         la seule proposition était d'y revenir : il fallait aussi pouvoir en
+         sortir (Pierre, 11/09/2026). -->
+    <button class="bouton--pale" id="quitter-tournoi" type="button" hidden>Quitter le tournoi</button>
     <!-- LA VICTOIRE SE MONTRE. C'est le moteur du jeu : une partie gagnée
          qu'on affiche en statut WhatsApp emmène le lien avec elle. Il ne
          s'affiche qu'après une vraie victoire, jamais avant. -->
@@ -472,80 +514,57 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
 
 </div>
 
-<!-- ═══════════════════════════════════════════════════ LE TOURNOI ═══════
-     Écrit le 10/09/2026 sur ordre de Pierre, sur le modèle de papergames.io :
-     un tournoi privé, un lien unique, et des invités qui jouent SANS COMPTE,
-     en disant juste leur nom. Chez eux c'est quatre joueurs sans abonnement ;
-     ici c'est gratuit et ouvert, parce que c'est justement le tournoi qui
-     fait circuler le jeu sur WhatsApp. -->
-<div class="salon" id="tournoi" hidden role="dialog" aria-modal="true" aria-label="Tournoi">
+<!-- ═══════════════════════════════════════════════ LES TOURNOIS ═══════
+     Refait le 11/09/2026 sur ordre de Pierre, sur le modèle de
+     papergames.io/fr/gomoku. Le menu « Mode » est supprimé : il n'y a plus
+     des modes abstraits à choisir, il y a TROIS TOURNOIS qui portent un nom.
+     Et surtout, la page s'ouvre sur LE CLASSEMENT DE TOUT LE MONDE, DEPUIS
+     TOUJOURS : « qui clique sur tournoi, il voit les noms direct ». Un
+     classement où l'on reconnaît des prénoms donne envie d'y figurer, et
+     c'est ce qui fait circuler le jeu ; un écran vide ne donne envie de
+     rien. -->
+<div class="salon" id="tournoi" hidden role="dialog" aria-modal="true" aria-label="Tournois">
   <div class="salon__boite tournoi__boite">
 
-    <!-- ÉCRAN 1 : créer, ou répondre à une invitation -->
-    <div id="tr-creation">
-      <h2 id="tr-creation-titre">Créer un tournoi</h2>
-      <p class="salon__note" id="tr-creation-note">Un lien unique, à partager avec qui tu veux.
-        Personne n'a de compte à créer : chacun dit son nom et joue.</p>
+    <!-- LE NOM RESTE VISIBLE SUR LES TROIS ÉCRANS, et il est au-dessus d'eux
+         pour cette raison. Il était dans l'écran d'accueil : dès qu'on
+         passait sur « ouvrir un tournoi an fanmi », le champ disparaissait,
+         et celui qui n'avait pas encore donné son nom se voyait refuser la
+         création sans comprendre où le taper. -->
+    <label class="salon__nom" style="margin-bottom:4px">Ton nom
+      <input id="tr-nom" type="text" maxlength="18" placeholder="Ton prénom" autocomplete="off"
+             required aria-required="true">
+      <span class="salon__note-nom" id="tr-nom-note">Les autres joueurs le verront dans le classement.</span>
+    </label>
 
-      <label class="salon__nom" style="margin-top:12px">Ton nom
-        <input id="tr-nom" type="text" maxlength="18" placeholder="Ton prénom" autocomplete="off"
-               required aria-required="true">
-        <span class="salon__note-nom" id="tr-nom-note">Les autres joueurs le verront.</span>
-      </label>
+    <!-- ══ ÉCRAN 1 : L'ACCUEIL. Les trois tournois, puis le classement. ══ -->
+    <div id="tr-accueil">
+      <h2>Tournois</h2>
+      <p class="salon__note">Trois tournois, aucun compte à créer. Tu dis ton nom, tu joues,
+        et ton nom entre dans le classement.</p>
 
-      <div id="tr-neuf">
-        <label class="salon__nom" style="margin-top:10px">Nom du tournoi
-          <input id="tr-titre" type="text" maxlength="40" placeholder="Coupe du vendredi" autocomplete="off">
-        </label>
-        <div class="tournoi__essais" id="tr-essais"></div>
+      <div class="tournoi__cartes" id="tr-cartes"></div>
 
-        <div class="tournoi__choix" style="margin-top:10px">
-          <label>Mode
-            <select id="tr-mode">
-              <option value="ordinateur" selected>Contre l'ordinateur</option>
-              <option value="classement">Classement</option>
-              <option value="tableau">Tableau</option>
-            </select>
-          </label>
-          <label id="tr-l-manches">Chaque match
-            <select id="tr-manches">
-              <option value="3" selected>En 3 manches</option>
-              <option value="5">En 5 manches</option>
-            </select>
-          </label>
-          <label id="tr-l-niveau" hidden>Niveau imposé
-            <select id="tr-niveau">
-              <option value="facile">Facile</option>
-              <option value="moyenne" selected>Moyenne</option>
-              <option value="difficile">Difficile</option>
-            </select>
-          </label>
-          <label id="tr-l-parties" hidden>Parties chacun
-            <select id="tr-parties">
-              <option value="3">3 parties</option>
-              <option value="5" selected>5 parties</option>
-              <option value="10">10 parties</option>
-            </select>
-          </label>
-        </div>
-        <p class="tournoi__aide" id="tr-aide"></p>
-        <button id="tr-creer" type="button" style="margin-top:10px;width:100%">Créer et partager</button>
-      </div>
-
-      <div id="tr-invite" hidden>
-        <div class="salon__convie" style="margin-top:10px">
-          <b id="tr-invite-titre">On t'invite à un tournoi.</b>
-          <span id="tr-invite-sous">Dis ton nom et inscris-toi.</span>
-          <button id="tr-rejoindre" type="button">Rejoindre le tournoi</button>
-        </div>
-      </div>
+      <h3 id="tr-cl-titre">Le classement de tout le monde</h3>
+      <div id="tr-classement"></div>
     </div>
 
-    <!-- ÉCRAN 2 : le tournoi vivant -->
+    <!-- ══ ÉCRAN 2 : UN TOURNOI OUVERT ═══════════════════════════════════ -->
     <div id="tr-vivant" hidden>
+      <button class="tournoi__retour" id="tr-retour" type="button">‹ Les tournois</button>
       <div class="tournoi__entete">
         <span class="tournoi__titre" id="tr-v-titre"></span>
         <span class="tournoi__sous" id="tr-v-sous"></span>
+        <span class="tournoi__reste" id="tr-v-reste" hidden></span>
+      </div>
+
+      <!-- ON N'EST PAS ENCORE DANS LE CLASSEMENT : on le voit quand même, en
+           entier, et l'on entre d'un bouton. Cacher le classement à celui qui
+           n'est pas inscrit, c'est lui cacher la seule raison d'entrer. -->
+      <div class="salon__convie" id="tr-v-entrer" hidden>
+        <b id="tr-v-entrer-titre">Entre dans ce tournoi.</b>
+        <span id="tr-v-entrer-sous">Dis ton nom en haut, et te voilà dans le classement.</span>
+        <button id="tr-rejoindre" type="button">Entrer dans le classement</button>
       </div>
 
       <div id="tr-v-partage" hidden style="margin-top:10px">
@@ -558,21 +577,61 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
 
       <div class="tournoi__mien" id="tr-v-mien" hidden></div>
 
+      <!-- ON PARTAGE TOUJOURS SON RÉSULTAT (Pierre, 11/09/2026 : « toujours
+           possibilité de partager les victoires à la fin des tournois »).
+           Ce n'est pas un ornement : c'est exactement ce qui fait circuler le
+           jeu. Une victoire postée en statut WhatsApp emmène le lien avec
+           elle, et ramène des joueurs qu'on ne connaît pas. Le bouton est là
+           en permanence, pas seulement à la fin : quelqu'un qui prend la tête
+           un mardi a tout autant envie de le dire. -->
+      <button class="tournoi__partager" id="tr-v-partager" type="button" hidden>Partager mon résultat</button>
+
       <button id="tr-v-lancer" type="button" hidden style="margin-top:10px;width:100%">Lancer le tournoi</button>
       <!-- IL Y A TOUJOURS QUELQU'UN QUI S'INSCRIT ET QUI NE JOUE JAMAIS. Sans
            ce bouton, son silence garderait le classement en suspens pour tous
-           les autres, et le vainqueur ne serait jamais proclamé. -->
+           les autres. Il n'existe que pour le tournoi an fanmi : les deux
+           autres se ferment à l'heure, tout seuls. -->
       <button class="bouton--pale" id="tr-v-clore" type="button" hidden style="margin-top:8px;width:100%">Clore le tournoi et proclamer le classement</button>
 
       <h3>Classement</h3>
       <div id="tr-v-classement"></div>
-
       <div id="tr-v-rondes"></div>
-
       <p class="salon__note" id="tr-v-journal"></p>
     </div>
 
-    <button class="bouton--pale" id="tr-fermer" type="button">Revenir à ma partie</button>
+    <!-- ══ ÉCRAN 3 : OUVRIR UN TOURNOI AN FANMI ══════════════════════════
+         Le seul des trois qui se crée. Les deux autres existent tout seuls. -->
+    <div id="tr-neuf" hidden>
+      <button class="tournoi__retour" id="tr-neuf-retour" type="button">‹ Les tournois</button>
+      <h2>Tournoi an fanmi</h2>
+      <p class="salon__note">Un lien à partager avec la famille, les amis, les collègues.
+        Dès qu'on a le lien, on entre et on joue contre quelqu'un du tournoi.</p>
+
+      <label class="salon__nom" style="margin-top:10px">Nom du tournoi
+        <input id="tr-titre" type="text" maxlength="40" placeholder="Tournoi an fanmi" autocomplete="off">
+      </label>
+      <div class="tournoi__essais" id="tr-essais"></div>
+
+      <div class="tournoi__choix" style="margin-top:10px">
+        <label>Chaque match
+          <select id="tr-manches">
+            <option value="3" selected>En 3 manches</option>
+            <option value="5">En 5 manches</option>
+          </select>
+        </label>
+      </div>
+      <button id="tr-creer" type="button" style="margin-top:10px;width:100%">Créer et partager le lien</button>
+    </div>
+
+    <!-- LES TROIS SORTIES, ET IL LES FAUT TOUTES LES TROIS (Pierre,
+         11/09/2026) : on ouvre un tournoi par accident, il faut pouvoir en
+         sortir. « Revenir à ma partie » ferme la boîte sans rien changer ;
+         « Quitter le tournoi » sort vraiment du tournoi en cours, efface son
+         lien de l'adresse et rend les menus du jeu. -->
+    <div class="tournoi__pieds">
+      <button class="bouton--pale" id="tr-quitter" type="button" hidden>Quitter le tournoi</button>
+      <button class="bouton--pale" id="tr-fermer" type="button">Revenir à ma partie</button>
+    </div>
   </div>
 </div>
 
@@ -1926,7 +1985,6 @@ function accueillirLInvite(){
   /* UN LIEN DE TOURNOI PASSE AVANT UN LIEN DE TABLE : c'est lui qui circule
      sur WhatsApp, et l'invité doit tomber sur le tournoi, pas sur le jeu. */
   if (trCode()){
-    $("#mode").value = "tournoi";
     ouvrirTournoi();
     return true;
   }
@@ -2208,65 +2266,65 @@ function rejouer(){
 
 
 /* ═══════════════════════════════════════════════════════════════════════
-   LE TOURNOI
-   Écrit le 10/09/2026 sur ordre de Pierre, sur le modèle de papergames.io.
+   LES TOURNOIS, CÔTÉ JOUEUR
+   Refait le 11/09/2026 sur ordre de Pierre. Le menu « Mode » est supprimé :
+   plus de modes abstraits, TROIS TOURNOIS qui portent un nom et se
+   comprennent à la lecture.
 
-   CE QU'ON LEUR REPREND : un tournoi privé, un lien unique, des invités qui
-   jouent SANS CRÉER DE COMPTE, et leurs deux modes, avec leurs mots.
-     CLASSEMENT : tout le monde continue de jouer, les points désignent le
-                  vainqueur. On affronte à chaque ronde quelqu'un qui a le
-                  même nombre de points que soi.
-     TABLEAU    : élimination directe, on perd, on sort.
+     LE DÉFI DU VENDREDI    contre l'ordinateur, pour tout le monde, de
+                            vendredi à vendredi.
+     LE TOURNOI AN FANMI    un lien qui circule, on joue les uns contre les
+                            autres.
+     LA COUPE DES COLLÈGUES contre l'ordinateur, le plus de victoires dans la
+                            journée.
 
-   CE QU'ON NE LEUR REPREND PAS : leur limite de quatre joueurs sans
-   abonnement. Ici c'est gratuit et c'est ouvert jusqu'à trente-deux, parce
-   que c'est justement le tournoi qui fait circuler le jeu sur WhatsApp.
+   ET LA PAGE S'OUVRE SUR LE CLASSEMENT DE TOUT LE MONDE, DEPUIS TOUJOURS,
+   comme sur papergames.io : « qui clique sur tournoi, il voit les noms
+   direct ». C'est la pièce qui manquait. Un classement où l'on reconnaît des
+   prénoms donne envie d'y figurer, et c'est cela qui fait circuler le jeu ;
+   un écran vide ne donne envie de rien.
 
-   UN MATCH DE TOURNOI SE JOUE SUR UNE TABLE ORDINAIRE, celle du mode « en
+   UN MATCH AN FANMI SE JOUE SUR UNE TABLE ORDINAIRE, celle du mode « en
    ligne », nommée « t-<code>-<numéro> ». C'est la table qui rapporte son
    score au tournoi, jamais l'écran : un joueur qui ferme son téléphone au
    moment de la victoire ne doit pas effacer son résultat.
    ═══════════════════════════════════════════════════════════════════════ */
 
-var tournoi = null;              /* { code, vue } */
+var tournoi = null;              /* le tournoi ouvert à l'écran : { code, vue } */
+var tousLesTournois = null;      /* la dernière réponse de /tournois */
 var sondage = null;              /* le rappel régulier, tant que la boîte est ouverte */
-var TR_ESSAIS = ["Défi du vendredi", "Tournoi an fanmi", "La coupe des collègues"];
-var TR_AIDE = {
-  classement: "Tout le monde continue de jouer jusqu'au bout. À chaque ronde tu " +
-              "affrontes quelqu'un qui a le même nombre de points que toi, et ce " +
-              "sont les points qui désignent le vainqueur : 3 pour une victoire, " +
-              "1 pour un match nul.",
-  tableau:    "Élimination directe : on perd, on sort. Il ne reste qu'un seul " +
-              "joueur debout à la fin. S'il manque des joueurs pour compléter le " +
-              "tableau, les places vides deviennent des exemptions.",
-  ordinateur: "Celui qui gagne le plus contre l'ordinateur l'emporte. Chacun joue " +
-              "seul, quand il veut, sans attendre personne : c'est le mode qui se " +
-              "diffuse le mieux. Même niveau et même nombre de parties pour tout " +
-              "le monde, et à victoires égales, c'est le plus rapide qui passe " +
-              "devant."
-};
+var maPartieDeTournoi = null;    /* la partie de tournoi en cours, contre l'ordinateur */
 
-/* La partie de tournoi en cours, quand on joue seul contre l'ordinateur.
-   Vide le reste du temps : c'est elle qui dit à terminer() qu'il y a un
-   résultat à rapporter, et à qui. */
-var maPartieDeTournoi = null;
+var TR_ESSAIS = ["Tournoi an fanmi", "Défi a nou", "La coupe des collègues"];
+
+/* Les trois cartes, dans l'ordre où elles se lisent. Le défi du vendredi
+   d'abord : c'est celui qui dure une semaine, donc celui qui a le plus de
+   chances d'avoir déjà des noms dedans. */
+var TR_CARTES = [
+  { cle: "vendredi",  icone: "🏆", nom: "Défi du vendredi",
+    quoi: "Contre l'ordinateur, pour tout le monde, de vendredi à vendredi." },
+  { cle: "fanmi",     icone: "👪", nom: "Tournoi an fanmi",
+    quoi: "Un lien qui circule. Famille, amis, collègues : on joue les uns contre les autres." },
+  { cle: "collegues", icone: "⏱️", nom: "La coupe des collègues",
+    quoi: "Contre l'ordinateur : le plus de victoires dans la journée l'emporte." }
+];
 
 function trCode(){
-  var m = (location.hash || "").match(/^#tr=([a-z0-9]{6})$/i);
+  var m = (location.hash || "").match(/^#tr=([a-z0-9]{4,12})$/i);
   return m ? m[1].toLowerCase() : null;
 }
 
-function lienDeMonTournoi(){
-  if (!tournoi || !tournoi.code) return null;
+function lienDeMonTournoi(code){
+  if (!code) return null;
   var base = ADRESSE_JEU;
   if (location.protocol === "http:" || location.protocol === "https:"){
     base = location.origin + location.pathname;
   }
-  return base + "#tr=" + tournoi.code;
+  return base + "#tr=" + code;
 }
 
-/* ON NE S'INSCRIT PAS SANS DIRE SON NOM, exactement comme à une table : les
-   autres joueurs doivent savoir qui ils affrontent. */
+/* ON NE FIGURE PAS AU CLASSEMENT SANS DIRE SON NOM : les autres joueurs
+   doivent savoir qui ils lisent. */
 function trExigerLeNom(){
   var champ = $("#tr-nom"), n = (champ.value || "").trim();
   if (n){
@@ -2276,9 +2334,11 @@ function trExigerLeNom(){
   }
   champ.classList.add("manque");
   champ.focus();
-  $("#tr-nom-note").textContent = "Il faut un nom pour t'inscrire.";
+  $("#tr-nom-note").textContent = "Il faut un nom pour entrer dans le classement.";
   return null;
 }
+
+/* ─────────────────────────────────────────────── ouvrir, fermer, quitter ── */
 
 function ouvrirTournoi(){
   $("#tournoi").hidden = false;
@@ -2286,46 +2346,181 @@ function ouvrirTournoi(){
     var garde = localStorage.getItem("tptc-nom");
     if (garde && !$("#tr-nom").value) $("#tr-nom").value = garde;
   } catch (e) {}
-
-  var code = trCode();
-  if (!tournoi && code) tournoi = { code: code, vue: null };
-
-  if (tournoi){ rafraichirTournoi(); armerLeSondage(); return; }
-
-  /* Aucun tournoi en vue : on en propose un. */
-  $("#tr-creation").hidden = false;
-  $("#tr-vivant").hidden = true;
-  $("#tr-neuf").hidden = false;
-  $("#tr-invite").hidden = true;
-  trAide();
+  chargerLesTournois();
+  armerLeSondage();
 }
 
+/* SORTIE 1 : on ferme la boîte, et rien ne change. */
 function fermerTournoi(){
   $("#tournoi").hidden = true;
   clearInterval(sondage); sondage = null;
-  if (!enLigne() && $("#mode").value === "tournoi") $("#mode").value = "ordinateur";
 }
 
-/* Le tournoi ne bouge que quand un match se termine : on demande de temps en
-   temps, plutôt que de tenir une connexion permanente ouverte pour rien. */
+/* SORTIE 2 : ON QUITTE VRAIMENT LE TOURNOI EN COURS (Pierre, 11/09/2026 :
+   « quand on est en train de créer un tournoi accidentellement il faut un
+   moyen pour quitter les tournois »). On oublie le tournoi ouvert, on efface
+   son lien de l'adresse pour qu'un rechargement n'y ramène pas, et l'on rend
+   au joueur ses menus et sa partie. */
+function quitterLeTournoi(){
+  tournoi = null;
+  maPartieDeTournoi = null;
+  $("#difficulte").disabled = false;
+  try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+  $("#au-tournoi").hidden = true;
+  $("#quitter-tournoi").hidden = true;
+  $("#tournoi").hidden = true;
+  clearInterval(sondage); sondage = null;
+  if (enLigne()) quitterLaTable();
+  dire("Tu as quitté le tournoi.");
+}
+
+/* Le tournoi ne bouge que quand une partie se termine : on demande de temps
+   en temps, plutôt que de tenir une connexion permanente ouverte pour rien. */
 function armerLeSondage(){
   clearInterval(sondage);
   sondage = setInterval(function(){
-    if ($("#tournoi").hidden || !tournoi){ clearInterval(sondage); sondage = null; return; }
-    if (tournoi.vue && tournoi.vue.fini) return;
-    rafraichirTournoi(true);
-  }, 5000);
+    if ($("#tournoi").hidden){ clearInterval(sondage); sondage = null; return; }
+    if (tournoi) rafraichirTournoi(true);
+    else chargerLesTournois(true);
+  }, 6000);
 }
 
-function trAide(){
-  var m = $("#tr-mode").value;
-  $("#tr-aide").textContent = TR_AIDE[m] || "";
-  /* Un tournoi contre l'ordinateur n'a pas de match en manches, il a un
-     niveau et un quota : on ne montre que les réglages qui servent. */
-  var solo = (m === "ordinateur");
-  $("#tr-l-manches").hidden = solo;
-  $("#tr-l-niveau").hidden = !solo;
-  $("#tr-l-parties").hidden = !solo;
+/* ════════════════════════════ L'ACCUEIL ════════════════════════════════
+   Une seule requête rend le classement de tous les temps ET l'état des trois
+   tournois : la page s'affiche pleine dès la première seconde, au lieu de
+   trois secousses successives. */
+function chargerLesTournois(silencieux){
+  if (!SERVEUR) return;
+  var url = SERVEUR + "/tournois?jeton=" + encodeURIComponent(monJeton());
+  var mien = trCode();
+  if (mien) url += "&fanmi=" + encodeURIComponent(mien);
+  fetch(url).then(function(r){ return r.json(); }).then(function(d){
+    tousLesTournois = d;
+    if (tournoi && tournoi.code){
+      /* Un tournoi est ouvert à l'écran : on le rafraîchit avec ce que la
+         même requête vient de rendre, sans en relancer une seconde. */
+      var v = [d.vendredi, d.collegues, d.fanmi];
+      for (var i = 0; i < v.length; i++){
+        if (v[i] && v[i].code === tournoi.code){ afficherTournoi(v[i]); return; }
+      }
+    }
+    montrerLAccueil();
+  }).catch(function(){ if (!silencieux) dire("Le serveur ne répond pas."); });
+}
+
+function montrerLAccueil(){
+  tournoi = null;
+  $("#tr-accueil").hidden = false;
+  $("#tr-vivant").hidden = true;
+  $("#tr-neuf").hidden = true;
+  $("#tr-quitter").hidden = true;
+  dessinerLesCartes();
+  dessinerLeClassementGeneral();
+}
+
+function dessinerLesCartes(){
+  var d = tousLesTournois || {}, html = "";
+  for (var i = 0; i < TR_CARTES.length; i++){
+    var c = TR_CARTES[i], vue = d[c.cle] || null, etat = "", mien = false;
+
+    if (c.cle === "fanmi"){
+      if (vue){
+        mien = vue.maPlace >= 0;
+        etat = vue.inscrits + (vue.inscrits > 1 ? " joueurs" : " joueur") +
+               (vue.fini ? ", terminé" : (vue.lance ? ", en cours" : ", inscriptions ouvertes"));
+      } else etat = "Ouvrir un tournoi et partager le lien";
+    } else if (vue){
+      mien = vue.maPlace >= 0;
+      var bouts = [];
+      bouts.push(vue.inscrits + (vue.inscrits > 1 ? " joueurs" : " joueur"));
+      if (vue.classement && vue.classement.length && vue.classement[0].g){
+        bouts.push("en tête : " + echapper(vue.classement[0].nom) + ", " +
+                   vue.classement[0].g + (vue.classement[0].g > 1 ? " victoires" : " victoire"));
+      }
+      bouts.push(resteAvant(vue.finA, d.maintenant));
+      etat = bouts.join(" · ");
+    } else etat = "…";
+
+    html += '<button class="tournoi__carte' + (mien ? " tournoi__carte--mien" : "") +
+      '" type="button" data-cle="' + c.cle + '">' +
+      '<span class="tournoi__cIcone">' + c.icone + "</span>" +
+      '<span class="tournoi__cTexte"><b>' + c.nom + "</b><em>" + c.quoi + "</em>" +
+      "<i>" + etat + "</i></span>" +
+      '<span class="tournoi__cFleche">›</span></button>';
+  }
+  $("#tr-cartes").innerHTML = html;
+}
+
+/* Le temps qui reste avant la fin du cycle, dit comme on le dirait. */
+function resteAvant(finA, maintenant){
+  if (!finA || !maintenant) return "";
+  var ms = finA - maintenant;
+  if (ms <= 0) return "terminé";
+  var h = Math.floor(ms / 3600000), j = Math.floor(h / 24);
+  if (j >= 1) return "encore " + j + (j > 1 ? " jours" : " jour");
+  if (h >= 1) return "encore " + h + " h";
+  return "encore " + Math.max(1, Math.round(ms / 60000)) + " min";
+}
+
+/* ══ LE CLASSEMENT DE TOUT LE MONDE, DEPUIS TOUJOURS ═══════════════════
+   Rang, nom, et LE NOMBRE DE VICTOIRES en gros à droite, exactement comme
+   sur papergames.io. Celui qui n'a encore rien gagné y figure quand même,
+   avec zéro : c'est d'avoir vu son propre nom dans la liste qui donne envie
+   d'y remonter. */
+function dessinerLeClassementGeneral(){
+  var cl = (tousLesTournois && tousLesTournois.classement) || { lignes: [], moi: null, total: 0 };
+  var l = cl.lignes || [];
+  if (!l.length){
+    $("#tr-classement").innerHTML = '<p class="tournoi__vide">Le classement est encore vide. ' +
+      "Dis ton nom, entre dans un tournoi, et tu seras le premier nom dessus.</p>";
+    $("#tr-cl-titre").textContent = "Le classement de tout le monde";
+    return;
+  }
+  $("#tr-cl-titre").textContent = "Le classement de tout le monde (" + cl.total +
+    (cl.total > 1 ? " joueurs)" : " joueur)");
+  $("#tr-classement").innerHTML = '<div class="tournoi__barre">' +
+    l.map(ligneDeClassement).join("") +
+    (cl.moi ? ligneDeClassement(cl.moi) : "") + "</div>";
+}
+
+function ligneDeClassement(x){
+  var sous = [];
+  sous.push(x.j + (x.j > 1 ? " parties jouées" : (x.j === 1 ? " partie jouée" : " partie jouée")));
+  if (x.n) sous.push(x.n + (x.n > 1 ? " nuls" : " nul"));
+  return '<div class="tournoi__rang' + (x.moi ? " tournoi__rang--moi" : "") +
+    (x.rappel ? " tournoi__rappel" : "") + '">' +
+    '<span class="tournoi__place">' + x.rang + "</span>" +
+    '<span class="tournoi__qui"><b>' + echapper(x.nom) + "</b><em>" + sous.join(" · ") + "</em></span>" +
+    '<span class="tournoi__score"><b>' + x.v + "</b><small>" +
+    (x.v > 1 ? "victoires" : "victoire") + "</small></span></div>";
+}
+
+/* ─────────────────────────────────────────────── entrer dans un tournoi ── */
+
+function ouvrirUneCarte(cle){
+  var d = tousLesTournois || {};
+  if (cle === "fanmi" && !d.fanmi){
+    /* Personne ne m'a envoyé de lien : je peux en ouvrir un. */
+    $("#tr-accueil").hidden = true;
+    $("#tr-vivant").hidden = true;
+    $("#tr-neuf").hidden = false;
+    $("#tr-quitter").hidden = true;
+    return;
+  }
+  var vue = d[cle];
+  if (!vue){ chargerLesTournois(); return; }
+  afficherTournoi(vue);
+}
+
+function rafraichirTournoi(silencieux){
+  if (!tournoi || !SERVEUR){ chargerLesTournois(silencieux); return; }
+  fetch(SERVEUR + "/tournoi/" + tournoi.code + "?jeton=" + encodeURIComponent(monJeton()))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.erreur){ if (!silencieux){ dire(d.erreur); montrerLAccueil(); } return; }
+      if (d.vue) afficherTournoi(d.vue);
+    })
+    .catch(function(){ if (!silencieux) dire("Le serveur ne répond pas."); });
 }
 
 function creerTournoi(){
@@ -2340,21 +2535,18 @@ function creerTournoi(){
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       nom: titre,
-      mode: $("#tr-mode").value,
       manches: parseInt($("#tr-manches").value, 10),
-      niveau: $("#tr-niveau").value,
-      parties: parseInt($("#tr-parties").value, 10),
       jeton: monJeton(),
       monNom: nom
     })
   }).then(function(r){ return r.json(); }).then(function(d){
-    bouton.disabled = false; bouton.textContent = "Créer et partager";
+    bouton.disabled = false; bouton.textContent = "Créer et partager le lien";
     if (!d.code){ dire("Le tournoi n'a pas pu s'ouvrir."); return; }
     tournoi = { code: d.code, vue: null };
     try { history.replaceState(null, "", location.pathname + "#tr=" + d.code); } catch (e) {}
-    rafraichirTournoi(); armerLeSondage();
+    rafraichirTournoi();
   }).catch(function(){
-    bouton.disabled = false; bouton.textContent = "Créer et partager";
+    bouton.disabled = false; bouton.textContent = "Créer et partager le lien";
     dire("Le serveur ne répond pas.");
   });
 }
@@ -2369,7 +2561,6 @@ function rejoindreTournoi(){
   }).then(function(r){ return r.json(); }).then(function(d){
     if (d.erreur){ $("#tr-nom-note").textContent = d.erreur; return; }
     if (d.vue) afficherTournoi(d.vue);
-    armerLeSondage();
   }).catch(function(){ dire("Le serveur ne répond pas."); });
 }
 
@@ -2388,68 +2579,43 @@ function lancerTournoi(){
   }).catch(function(){ bouton.disabled = false; dire("Le serveur ne répond pas."); });
 }
 
-function rafraichirTournoi(silencieux){
-  if (!tournoi || !SERVEUR) return;
-  fetch(SERVEUR + "/tournoi/" + tournoi.code + "?jeton=" + encodeURIComponent(monJeton()))
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if (d.erreur){
-        if (!silencieux){
-          $("#tr-creation").hidden = false;
-          $("#tr-vivant").hidden = true;
-          $("#tr-creation-note").textContent = "Ce tournoi n'existe plus. Tu peux en ouvrir un autre.";
-          tournoi = null;
-        }
-        return;
-      }
-      if (d.vue) afficherTournoi(d.vue);
-    })
-    .catch(function(){ if (!silencieux) dire("Le serveur ne répond pas."); });
-}
-
 /* ─────────────────────────────────────────────────── ce que l'on montre ── */
 
 function afficherTournoi(vue){
-  if (!tournoi) tournoi = { code: vue.code };
-  tournoi.vue = vue;
+  tournoi = { code: vue.code, vue: vue };
+  $("#tr-accueil").hidden = true;
+  $("#tr-neuf").hidden = true;
+  $("#tr-vivant").hidden = false;
+  $("#tr-quitter").hidden = false;
+  $("#quitter-tournoi").hidden = false;
 
-  /* PAS ENCORE INSCRIT : on lui montre l'invitation, pas le classement. */
-  if (vue.maPlace < 0 && !vue.lance){
-    $("#tr-creation").hidden = false;
-    $("#tr-vivant").hidden = true;
-    $("#tr-neuf").hidden = true;
-    $("#tr-invite").hidden = false;
-    $("#tr-creation-titre").textContent = vue.nom;
-    $("#tr-creation-note").textContent = trResume(vue);
-    $("#tr-invite-titre").textContent = "On t'invite au tournoi « " + vue.nom + " ».";
-    $("#tr-invite-sous").textContent = vue.inscrits + (vue.inscrits > 1 ? " joueurs sont" : " joueur est") +
-      " déjà inscrit" + (vue.inscrits > 1 ? "s" : "") + ". Dis ton nom et rejoins-les.";
-    try { $("#tr-nom").focus(); } catch (e) {}
-    return;
-  }
-  if (vue.maPlace < 0 && vue.lance){
-    $("#tr-creation").hidden = true;
-    $("#tr-vivant").hidden = false;
-    $("#tr-v-partage").hidden = true;
-    $("#tr-v-lancer").hidden = true;
-    $("#tr-v-mien").hidden = false;
-    $("#tr-v-mien").innerHTML = "<b>Le tournoi a déjà commencé.</b>" +
-      "<span>Tu peux suivre le classement, mais les inscriptions sont fermées.</span>";
-  } else {
-    $("#tr-creation").hidden = true;
-    $("#tr-vivant").hidden = false;
-    montrerMonMatch(vue);
-  }
-
-  $("#au-tournoi").hidden = false;
   $("#tr-v-titre").textContent = vue.nom;
   $("#tr-v-sous").textContent = trResume(vue);
 
-  /* LE LIEN NE SE PARTAGE QUE TANT QU'ON PEUT ENCORE S'INSCRIRE : après le
-     lancement, il n'y a plus personne à faire entrer. */
+  var reste = $("#tr-v-reste");
+  var texteReste = vue.global ? resteAvant(vue.finA, (tousLesTournois || {}).maintenant || Date.now()) : "";
+  reste.hidden = !texteReste;
+  reste.textContent = texteReste ? ("Ce cycle : " + texteReste) : "";
+
+  /* PAS ENCORE DANS LE CLASSEMENT : on lui montre quand même tout, et on lui
+     tend le bouton pour y entrer. */
+  var entrer = $("#tr-v-entrer");
+  entrer.hidden = vue.maPlace >= 0 || vue.fini;
+  if (!entrer.hidden){
+    $("#tr-v-entrer-titre").textContent = vue.inscrits
+      ? (vue.inscrits + (vue.inscrits > 1 ? " joueurs sont déjà là." : " joueur est déjà là."))
+      : "Personne n'est encore entré.";
+    $("#tr-v-entrer-sous").textContent = vue.global
+      ? "Dis ton nom en haut de la page, et te voilà dans le classement."
+      : (vue.lance ? "Le tournoi a commencé, les inscriptions sont fermées."
+                   : "Dis ton nom en haut de la page, et te voilà dans le classement.");
+    $("#tr-rejoindre").hidden = !vue.global && vue.lance;
+  }
+
+  /* LE LIEN NE SE PARTAGE QU'AN FANMI, et tant qu'on peut encore entrer. */
   var partage = $("#tr-v-partage");
-  if (!vue.lance){
-    var lien = lienDeMonTournoi();
+  if (!vue.global && !vue.lance){
+    var lien = lienDeMonTournoi(vue.code);
     partage.hidden = !lien;
     if (lien){
       $("#tr-v-url").value = lien;
@@ -2460,67 +2626,84 @@ function afficherTournoi(vue){
   } else partage.hidden = true;
 
   var lancer = $("#tr-v-lancer");
-  lancer.hidden = !(vue.organisateur && !vue.lance);
+  lancer.hidden = !(vue.organisateur && !vue.lance && vue.maPlace >= 0);
   lancer.textContent = (vue.inscrits < 2)
     ? "Il faut au moins deux joueurs"
     : "Lancer le tournoi (" + vue.inscrits + " joueurs)";
   lancer.disabled = vue.inscrits < 2;
 
-  var clore = $("#tr-v-clore");
-  clore.hidden = !(vue.organisateur && vue.lance && !vue.fini);
+  $("#tr-v-clore").hidden = !(vue.organisateur && vue.lance && !vue.fini);
 
+  /* LE PARTAGE EST LÀ DÈS QU'ON EST DANS LE CLASSEMENT, et il y reste après
+     la fin : c'est à ce moment-là qu'on a le plus envie de le montrer. */
+  $("#tr-v-partager").hidden = vue.maPlace < 0;
+  $("#tr-v-partager").textContent = vue.fini
+    ? (estPremier(vue) ? "Partager ma victoire" : "Partager mon classement")
+    : "Partager mon résultat";
+
+  montrerMonMatch(vue);
   dessinerClassement(vue);
   dessinerLesRondes(vue);
   $("#tr-v-journal").textContent = (vue.journal || []).slice(-3).join("  ");
 }
 
+function estPremier(vue){
+  var cl = vue.classement || [];
+  return cl.length > 0 && cl[0].place === vue.maPlace;
+}
+
 function trResume(vue){
-  var mots = [];
-  if (vue.mode === "ordinateur"){
-    mots.push("Contre l'ordinateur");
-    mots.push(vue.parties + " parties chacun, en " + vue.niveau);
+  /* La phrase du tournoi finit par un point ; la ligne, elle, se lit en
+     morceaux séparés par des points médians. On enlève le point final, sinon
+     on lit « … à vendredi. · 5 parties ». */
+  var mots = [String(vue.phrase || "").replace(/\.$/, "")];
+  if (vue.solo){
+    mots.push(vue.parties ? (vue.parties + " parties chacun, en " + vue.niveau)
+                          : ("parties illimitées, en " + vue.niveau));
   } else {
-    mots.push(vue.mode === "tableau" ? "Tableau, élimination directe" : "Classement aux points");
     mots.push("matchs en " + vue.manches + " manches");
   }
-  if (vue.fini) mots.push("terminé, " + (vue.vainqueur ? vue.vainqueur + " l'emporte" : "sans vainqueur"));
-  else if (vue.lance && vue.mode === "ordinateur") mots.push("en cours");
-  else if (vue.lance) mots.push("ronde " + vue.ronde + " sur " + vue.rondesMax);
-  else mots.push(vue.inscrits + " inscrit" + (vue.inscrits > 1 ? "s" : "") + " sur " + vue.maxJoueurs);
+  if (vue.fini) mots.push(vue.vainqueur ? (vue.vainqueur + " l'emporte") : "terminé");
+  else if (!vue.lance) mots.push(vue.inscrits + " inscrit" + (vue.inscrits > 1 ? "s" : ""));
+  else if (!vue.solo) mots.push("ronde " + vue.ronde + " sur " + vue.rondesMax);
   return mots.join(" · ");
 }
 
 function montrerMonMatch(vue){
   var bloc = $("#tr-v-mien");
+  if (vue.maPlace < 0){ bloc.hidden = true; return; }
+
   if (vue.fini){
     bloc.hidden = false;
     var moi = null, cl = vue.classement || [];
     for (var i = 0; i < cl.length; i++) if (cl[i].place === vue.maPlace) moi = cl[i];
-    bloc.innerHTML = "<b>" + echapper(vue.vainqueur || "Personne") + " remporte le tournoi.</b>" +
-      (moi ? "<span>Tu finis " + moi.rang + (moi.rang === 1 ? "er" : "e") +
-             " avec " + moi.pts + " point" + (moi.pts > 1 ? "s" : "") + ".</span>" : "");
+    bloc.innerHTML = "<b>" + echapper(vue.vainqueur || "Personne") + " remporte " + echapper(vue.nom) + ".</b>" +
+      (moi ? "<span>Tu finis " + moi.rang + (moi.rang === 1 ? "er" : "e") + " avec " +
+             moi.g + (moi.g > 1 ? " victoires" : " victoire") + ".</span>" : "");
     return;
   }
+
   if (!vue.lance){
     bloc.hidden = false;
-    bloc.innerHTML = "<b>Tu es inscrit.</b><span>Partage le lien, puis " +
+    bloc.innerHTML = "<b>Tu es dans le classement.</b><span>Partage le lien, puis " +
       (vue.organisateur ? "lance le tournoi quand tout le monde est là."
                         : "attends que l'organisateur lance le tournoi.") + "</span>";
     return;
   }
-  /* MODE ORDINATEUR : il n'y a pas d'adversaire, il y a des parties qui
-     restent. On lui dit exactement où il en est et on lui tend le bouton. */
-  if (vue.mode === "ordinateur"){
+
+  /* CONTRE L'ORDINATEUR : pas d'adversaire, des parties qui restent. */
+  if (vue.solo){
     var q = vue.maPartie;
     if (!q){ bloc.hidden = true; return; }
     bloc.hidden = false;
-    if (q.reste <= 0){
+    if (q.parties && q.reste <= 0){
       bloc.innerHTML = "<b>Tu as joué tes " + q.parties + " parties.</b>" +
-        "<span>Le classement se fige dès que les autres ont fini les leurs.</span>";
+        "<span>Ton résultat est figé jusqu'à la fin du cycle.</span>";
     } else {
-      bloc.innerHTML = "<b>Partie " + (q.jouees + 1) + " sur " + q.parties + ".</b>" +
+      bloc.innerHTML = "<b>" + (q.parties ? ("Partie " + (q.jouees + 1) + " sur " + q.parties + ".")
+                                          : ("Tu as joué " + q.jouees + (q.jouees > 1 ? " parties." : " partie."))) + "</b>" +
         "<span>Contre l'ordinateur, en " + q.niveau +
-        ". Le niveau est imposé par le tournoi, il est le même pour tout le monde.</span>" +
+        ". Le niveau est imposé, il est le même pour tout le monde.</span>" +
         '<button id="tr-jouer" type="button">Jouer ma partie</button>';
       $("#tr-jouer").addEventListener("click", function(){ jouerMaPartie(vue); });
     }
@@ -2531,7 +2714,7 @@ function montrerMonMatch(vue){
   if (!m){ bloc.hidden = true; return; }
   bloc.hidden = false;
   if (m.sorti){
-    bloc.innerHTML = "<b>Tu es éliminé.</b><span>Reste là, tu peux suivre la suite du tableau.</span>";
+    bloc.innerHTML = "<b>Tu es éliminé.</b><span>Reste là, tu peux suivre la suite.</span>";
   } else if (m.exempt){
     bloc.innerHTML = "<b>Tu es exempt de cette ronde.</b>" +
       "<span>Tu marques quand même les points d'une victoire. La ronde suivante s'ouvre " +
@@ -2549,17 +2732,19 @@ function montrerMonMatch(vue){
 
 function dessinerClassement(vue){
   var cl = vue.classement || [];
-  if (!cl.length){ $("#tr-v-classement").innerHTML = ""; return; }
+  if (!cl.length){
+    $("#tr-v-classement").innerHTML = '<p class="tournoi__vide">Personne n\'est encore entré. ' +
+      "Sois le premier nom du tableau.</p>";
+    return;
+  }
 
-  /* ═══ CONTRE L'ORDINATEUR : LE NOMBRE DE VICTOIRES, EN GROS ═══════════
-     Posé par Pierre le 10/09/2026, sur le modèle de papergames.io : rang,
-     nom, et UN seul grand chiffre à droite. Le mode s'appelle « celui qui
-     gagne le plus contre l'ordinateur », c'est donc ce chiffre-là qu'on lit,
-     et c'est lui qui donne l'ordre du tableau. Le reste passe en petit sous
-     le nom : sept colonnes de lettres sur un téléphone, personne ne les
-     lit. Les deux autres modes gardent leur tableau, parce qu'un duel se
-     raconte en victoires ET en défaites. */
-  if (vue.mode === "ordinateur"){
+  /* CONTRE L'ORDINATEUR : LE NOMBRE DE VICTOIRES, EN GROS, comme sur
+     papergames. Le tournoi s'appelle « celui qui gagne le plus », c'est donc
+     ce chiffre-là qu'on lit, et c'est lui qui donne l'ordre du tableau. Le
+     reste passe en petit sous le nom : sept colonnes de lettres sur un
+     téléphone, personne ne les lit. An fanmi garde son tableau, parce qu'un
+     duel se raconte en victoires ET en défaites. */
+  if (vue.solo){
     var html = '<div class="tournoi__barre">';
     for (var i = 0; i < cl.length; i++){
       var x = cl[i], sous = [];
@@ -2615,6 +2800,69 @@ function dessinerLesRondes(vue){
   $("#tr-v-rondes").innerHTML = html;
 }
 
+
+/* ═══════ PARTAGER SON RÉSULTAT DE TOURNOI ══════════════════════════════
+   Posé le 11/09/2026. Le texte se construit sur ce que la personne a
+   VRAIMENT fait : premier, sur le podium, ou simplement dans le tableau.
+   Aucune formule en creux, aucun « seulement », aucun « sans » : on dit ce
+   qui est, en affirmatif, et l'on donne le lien.
+   ⚠️ LE LIEN D'UN TOURNOI DE CYCLE EST L'ADRESSE DU JEU, jamais le code du
+   cycle : la semaine prochaine, ce code ne mènera nulle part, alors que
+   l'adresse du jeu mènera toujours au défi en cours. Un lien an fanmi, lui,
+   porte son code, puisque ce tournoi-là ne se retrouve pas autrement. */
+function texteDePartage(vue){
+  if (!vue) return "";
+  var moi = null, cl = vue.classement || [];
+  for (var i = 0; i < cl.length; i++) if (cl[i].place === vue.maPlace) moi = cl[i];
+  var lien = vue.global ? lienDuJeu() : lienDeMonTournoi(vue.code);
+  var v = moi ? moi.g : 0;
+  var victoires = v + (v > 1 ? " victoires" : " victoire");
+
+  if (!moi) return "Viens jouer au " + vue.nom + " sur Ti Point Ti Croix : " + lien;
+
+  /* PAS ENCORE DE VICTOIRE : on le dit en affirmatif, on ne compte pas des
+     zéros. « Avec 0 victoire » se lit comme un aveu ; « je suis dans le
+     tournoi » se lit comme une invitation, et c'est le même fait. */
+  if (!v){
+    return "Je suis dans le " + vue.nom + " sur Ti Point Ti Croix. Viens jouer : " + lien;
+  }
+
+  if (vue.fini){
+    if (moi.rang === 1){
+      return "J'ai gagné le " + vue.nom + " sur Ti Point Ti Croix, avec " + victoires +
+             ". À toi de jouer : " + lien;
+    }
+    return "Je finis " + moi.rang + "e du " + vue.nom + " sur Ti Point Ti Croix, avec " +
+           victoires + ". Viens te mesurer : " + lien;
+  }
+
+  if (moi.rang === 1){
+    return "Je suis en tête du " + vue.nom + " sur Ti Point Ti Croix, avec " + victoires +
+           ". Viens me déloger : " + lien;
+  }
+  return "Je suis " + moi.rang + "e du " + vue.nom + " sur Ti Point Ti Croix, avec " +
+         victoires + ". Viens jouer : " + lien;
+}
+
+function lienDuJeu(){
+  if (location.protocol === "http:" || location.protocol === "https:"){
+    return location.origin + location.pathname;
+  }
+  return ADRESSE_JEU;
+}
+
+function partagerMonTournoi(){
+  var texte = tournoi && tournoi.vue ? texteDePartage(tournoi.vue) : "";
+  if (!texte) return;
+  /* Le partage NATIF d'abord : c'est lui, et lui seul, qui donne accès au
+     STATUT WhatsApp sur téléphone. Le lien wa.me n'ouvre qu'une discussion. */
+  if (navigator.share){
+    navigator.share({ text: texte }).catch(function(){});
+    return;
+  }
+  window.open("https://wa.me/?text=" + encodeURIComponent(texte), "_blank", "noopener");
+}
+
 /* Les noms viennent des joueurs : ils passent par là avant d'entrer dans une
    page. Sans cela, un nom malin pourrait écrire du code chez les autres. */
 function echapper(s){
@@ -2623,10 +2871,9 @@ function echapper(s){
     .replace(/"/g, "&quot;");
 }
 
-/* ─────────────────────────────────────────────────── jouer son match ── */
+/* ─────────────────────────────────────────────────── jouer sa partie ── */
 
-/* ═══════════════ JOUER SA PARTIE DE TOURNOI CONTRE L'ORDINATEUR ═══════
-   On quitte la boîte, on impose le niveau du tournoi, et l'on joue une partie
+/* On quitte la boîte, on impose le niveau du tournoi, et l'on joue une partie
    ordinaire. La seule différence est qu'à la fin, terminer() rapporte. */
 function jouerMaPartie(vue){
   if (!tournoi || !vue || !vue.maPartie) return;
@@ -2634,15 +2881,17 @@ function jouerMaPartie(vue){
   $("#tournoi").hidden = true;
   clearInterval(sondage); sondage = null;
   /* LE NIVEAU EST IMPOSÉ, ET LE MENU SE VERROUILLE : sans cela, on jouerait
-     en facile un tournoi annoncé en difficile, et le classement mentirait. */
+     en facile un tournoi annoncé en moyenne, et le classement mentirait. */
   $("#difficulte").value = vue.maPartie.niveau;
   $("#difficulte").disabled = true;
   maPartieDeTournoi = { code: tournoi.code, niveau: vue.maPartie.niveau };
   $("#mode").value = "ordinateur";
   $("#au-tournoi").hidden = false;
+  $("#quitter-tournoi").hidden = false;
   nouvellePartie();
-  dire("Partie " + (vue.maPartie.jouees + 1) + " sur " + vue.maPartie.parties +
-       " du tournoi « " + vue.nom + " ».");
+  dire(vue.maPartie.parties
+    ? ("Partie " + (vue.maPartie.jouees + 1) + " sur " + vue.maPartie.parties + " du " + vue.nom + ".")
+    : ("Une partie de plus pour " + vue.nom + "."));
 }
 
 /* LA PARTIE EST FINIE : on la rapporte au tournoi. On le fait ICI, au moment
@@ -2666,8 +2915,8 @@ function rapporterMaPartie(message, cellules){
   }).then(function(r){ return r.json(); }).then(function(d){
     if (d.erreur){ dire(d.erreur); return; }
     var reste = d.reste;
-    dire(gagne ? "🎉 Comptée pour le tournoi. " + (reste ? "Il t'en reste " + reste + "." : "C'était ta dernière.")
-               : "Comptée pour le tournoi. " + (reste ? "Il t'en reste " + reste + "." : "C'était ta dernière."));
+    dire((gagne ? "🎉 " : "") + "Comptée pour le tournoi." +
+         (reste ? " Il t'en reste " + reste + "." : (reste === 0 ? " C'était ta dernière." : "")));
     if (d.vue) tournoi = { code: mienne.code, vue: d.vue };
   }).catch(function(){
     dire("Le résultat n'a pas pu partir. Rouvre le tournoi pour réessayer.");
@@ -2693,28 +2942,26 @@ function jouerMonMatch(m){
   $("#tournoi").hidden = true;
   clearInterval(sondage); sondage = null;
   $("#salon-nom").value = nom;
+  $("#quitter-tournoi").hidden = false;
   connecter(m.table, nom, m.manches);
 }
 
-function demarrer(){
-  tracerGrille();
-  nouvellePartie();
-  $("#rejouer").addEventListener("click", rejouer);
-  $("#partager").addEventListener("click", partagerLaVictoire);
-  $("#voile-fermer").addEventListener("click", fermerFormulaire);
-  $("#duree").addEventListener("change", function(){ if (!fini && humain) lancerChrono(); });
-  $("#mode").addEventListener("change", function(){
-    if ($("#mode").value === "tournoi"){ ouvrirTournoi(); return; }
-    if ($("#mode").value === "ligne"){ ouvrirSalon(); return; }
-    if (enLigne()){ quitterLaTable(); return; }
-    nouvellePartie();                                      /* changer de mode rebat les cartes */
-  });
-
-  /* ─── LE TOURNOI ─────────────────────────────────────────────────────── */
+/* Tous les boutons de la boîte, branchés d'un coup au démarrage. */
+function brancherLesTournois(){
+  $("#tournoi-ouvrir").addEventListener("click", ouvrirTournoi);
   $("#tr-fermer").addEventListener("click", fermerTournoi);
+  $("#tr-quitter").addEventListener("click", quitterLeTournoi);
+  $("#quitter-tournoi").addEventListener("click", quitterLeTournoi);
+  $("#tr-retour").addEventListener("click", montrerLAccueil);
+  $("#tr-neuf-retour").addEventListener("click", montrerLAccueil);
   $("#tr-creer").addEventListener("click", creerTournoi);
   $("#tr-rejoindre").addEventListener("click", rejoindreTournoi);
   $("#tr-v-lancer").addEventListener("click", lancerTournoi);
+  $("#tr-v-partager").addEventListener("click", partagerMonTournoi);
+  $("#tr-cartes").addEventListener("click", function(e){
+    var b = e.target.closest ? e.target.closest(".tournoi__carte") : null;
+    if (b) ouvrirUneCarte(b.getAttribute("data-cle"));
+  });
   $("#tr-v-clore").addEventListener("click", function(){
     if (!tournoi) return;
     var b = this; b.disabled = true;
@@ -2728,10 +2975,8 @@ function demarrer(){
       if (d.vue) afficherTournoi(d.vue);
     }).catch(function(){ b.disabled = false; dire("Le serveur ne répond pas."); });
   });
-  $("#tr-mode").addEventListener("change", trAide);
   $("#au-tournoi").addEventListener("click", function(){
     if (enLigne()) quitterLaTable();
-    $("#mode").value = "tournoi";
     ouvrirTournoi();
   });
   $("#tr-v-copier").addEventListener("click", function(){
@@ -2747,13 +2992,30 @@ function demarrer(){
       });
     } else { try { document.execCommand("copy"); fait(); } catch (e) {} }
   });
-  /* Les noms tout faits, comme chez papergames : c'est la friction du champ
-     vide qui fait abandonner, pas le manque d'idées.
+  /* Les noms tout faits : c'est la friction du champ vide qui fait
+     abandonner, pas le manque d'idées.
      ⚠️ CECI N'EST PAS UNE FONCTION ANONYME APPELÉE SUR PLACE, ET C'EST VOULU :
      test_moteur.js et test_serveur.js chargent ce script et coupent sur la
      PREMIÈRE occurrence de la fermeture d'une telle fonction. Une de plus
      dans le fichier, et les deux bancs de tests ne mesurent plus rien. */
   poserLesNomsTouFaits();
+}
+
+function demarrer(){
+  tracerGrille();
+  nouvellePartie();
+  $("#rejouer").addEventListener("click", rejouer);
+  $("#partager").addEventListener("click", partagerLaVictoire);
+  $("#voile-fermer").addEventListener("click", fermerFormulaire);
+  $("#duree").addEventListener("change", function(){ if (!fini && humain) lancerChrono(); });
+  $("#mode").addEventListener("change", function(){
+    if ($("#mode").value === "ligne"){ ouvrirSalon(); return; }
+    if (enLigne()){ quitterLaTable(); return; }
+    nouvellePartie();                                      /* changer de mode rebat les cartes */
+  });
+
+  /* ─── LES TROIS TOURNOIS ─────────────────────────────────────────────── */
+  brancherLesTournois();
 
   /* ─── LES TABLES EN LIGNE ────────────────────────────────────────────── */
   $("#salon-fermer").addEventListener("click", function(){
