@@ -60,6 +60,11 @@ h1{
 /* MASQUÉ VEUT DIRE ABSENT : .moi est en display:flex, qui l'emporterait sur
    le display:none de l'attribut hidden et laisserait une bande vide. */
 .moi[hidden]{display:none}
+/* ⚠️ LA LIGNE DU NOM OUVRE LE DÉFI (posé le 11/09/2026). Le bouton de la barre
+   dit « Quitter le défi » tant qu'on y est : c'est cette ligne qui ramène au
+   classement en cours de route. Elle n'existe qu'en défi, donc elle n'a qu'un
+   seul sens possible. */
+.moi{cursor:pointer}
 .moi b{color:var(--encre);font-weight:800}
 .moi__sep{opacity:.5}
 /* LE NOM SE TOUCHE POUR SE CHANGER : il en garde la couleur de l'encre, sans
@@ -3711,6 +3716,14 @@ function jouerMonMatch(m){
 /* Tous les boutons de la boîte, branchés d'un coup au démarrage. */
 function brancherLesTournois(){
   /* UN SEUL BOUTON, DEUX GESTES, CELUI QUE SA LÉGENDE ANNONCE. */
+  /* LA LIGNE DU NOM RAMÈNE AU CLASSEMENT, puisque le bouton sert de sortie. */
+  var monBloc = $("#moi");
+  if (monBloc){
+    monBloc.title = "Voir le classement du défi";
+    monBloc.addEventListener("click", function(){
+      if (tournoi && tournoi.vue) ouvrirTournoi();
+    });
+  }
   $("#tournoi-ouvrir").addEventListener("click", function(){
     if (tournoi && tournoi.vue) quitterLeTournoi(); else ouvrirTournoi();
   });
