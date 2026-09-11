@@ -53,6 +53,8 @@ h1{
 .soustitre{margin:0 0 18px;color:var(--encre-2);font-size:14px}
 
 .reglages{display:flex;flex-wrap:wrap;justify-content:center;gap:9px;margin-bottom:16px}
+.paire{display:flex;gap:9px;width:100%;justify-content:center}
+.paire button{flex:1 1 0;min-width:0;padding-left:10px;padding-right:10px}
 .reglages label{
   display:flex;align-items:center;gap:7px;
   background:rgba(4,38,18,.42);border:1px solid rgba(255,255,255,.10);
@@ -456,12 +458,20 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
         <option value="60">60 secondes</option>
       </select>
     </label>
-    <button id="rejouer" type="button">Rejouer</button>
-    <!-- LE TOURNOI EST UNE ACTION, PAS UN RÉGLAGE (Pierre, 11/09/2026) : il
-         sort du menu « Mode » et vient se poser à côté de « Rejouer ». C'est
-         lui qui fait circuler le jeu sur WhatsApp, il ne se cache pas au
-         fond d'un déroulant. -->
-    <button id="tournoi-ouvrir" type="button">Tournoi</button>
+    <!-- REJOUER ET TOURNOI SONT CÔTE À CÔTE, ET IL FAUT CE CONTENEUR POUR
+         CELA. La barre est un flex qui passe à la ligne : sur un téléphone,
+         chaque élément prenait une ligne à lui seul, et « Tournoi » se
+         retrouvait SOUS « Rejouer » au lieu d'être à côté (Pierre,
+         11/09/2026). Les deux sont maintenant dans la même rangée, à part
+         égale. -->
+    <div class="paire">
+      <button id="rejouer" type="button">Rejouer</button>
+      <!-- LE TOURNOI EST UNE ACTION, PAS UN RÉGLAGE : il sort du menu
+           « Mode » et se pose à côté de « Rejouer ». C'est lui qui fait
+           circuler le jeu sur WhatsApp, il ne se cache pas dans un
+           déroulant. -->
+      <button id="tournoi-ouvrir" type="button">Tournoi</button>
+    </div>
     <button id="quitter" type="button" hidden>Quitter la table</button>
     <!-- ON NE PERD JAMAIS SON TOURNOI DE VUE. Un match de tournoi se joue sur
          une table ordinaire : sans ce bouton, le joueur qui a fini son match
@@ -2310,11 +2320,20 @@ function rejouer(){
    ═══════════════════════════════════════════════════════════════════════ */
 
 var tournoi = null;              /* le tournoi ouvert à l'écran : { code, vue } */
+/* SUR QUEL ÉCRAN ON EST : « accueil », « tournoi » ou « neuf ». Il y a trois
+   écrans dans une seule boîte, et le rappel régulier les redessine toutes les
+   six secondes : sans cette variable, il ramenait à l'accueil celui qui était
+   en train de remplir le formulaire d'un tournoi an fanmi, et le formulaire
+   disparaissait sous ses doigts (constaté par Pierre le 11/09/2026). */
+var ecran = "accueil";
 var tousLesTournois = null;      /* la dernière réponse de /tournois */
 var sondage = null;              /* le rappel régulier, tant que la boîte est ouverte */
 var maPartieDeTournoi = null;    /* la partie de tournoi en cours, contre l'ordinateur */
 
-var TR_ESSAIS = ["Tournoi an fanmi", "Défi a nou", "La coupe des collègues"];
+/* Des noms tout faits pour le tournoi an fanmi : c'est la friction du champ
+   vide qui fait abandonner, pas le manque d'idées. Aucun ne reprend le nom
+   d'un des trois tournois, sans quoi on croirait ouvrir celui-là. */
+var TR_ESSAIS = ["Tournoi an fanmi", "Défi a nou", "Kout la fanmi"];
 
 /* Les trois cartes, dans l'ordre où elles se lisent. Le défi du vendredi
    d'abord : c'est celui qui dure une semaine, donc celui qui a le plus de
@@ -2361,6 +2380,7 @@ function trExigerLeNom(){
 
 function ouvrirTournoi(){
   $("#tournoi").hidden = false;
+  remonterLaBoite();
   try {
     var garde = localStorage.getItem("tptc-nom");
     if (garde && !$("#tr-nom").value) $("#tr-nom").value = garde;
@@ -2427,19 +2447,39 @@ function chargerLesTournois(silencieux){
        Le lien circule sur WhatsApp pour amener quelqu'un DANS un tournoi
        précis ; le déposer sur la liste des trois, c'est lui faire chercher
        lui-même celui auquel on vient de l'inviter. */
-    if (d.fanmi && trCode() === d.fanmi.code){ afficherTournoi(d.fanmi); return; }
+    if (ecran !== "neuf" && d.fanmi && trCode() === d.fanmi.code){
+      afficherTournoi(d.fanmi); return;
+    }
+    /* ⚠️ LE RAPPEL RÉGULIER NE CHANGE JAMAIS D'ÉCRAN TOUT SEUL. Celui qui
+       remplit le nom de son tournoi an fanmi doit pouvoir prendre son temps :
+       il se faisait renvoyer à l'accueil au bout de six secondes. */
+    if (ecran === "neuf") return;
     montrerLAccueil();
   }).catch(function(){ if (!silencieux) dire("Le serveur ne répond pas."); });
 }
 
 function montrerLAccueil(){
   tournoi = null;
+  ecran = "accueil";
   $("#tr-accueil").hidden = false;
   $("#tr-vivant").hidden = true;
   $("#tr-neuf").hidden = true;
   $("#tr-quitter").hidden = true;
   dessinerLesCartes();
   dessinerLeClassementGeneral();
+  remonterLaBoite();
+}
+
+/* ⚠️ ON REMONTE LA BOÎTE EN HAUT À CHAQUE CHANGEMENT D'ÉCRAN. Elle défile,
+   et son défilement ne se remet pas tout seul : en tapant une carte placée en
+   bas, on arrivait dans le tournoi déjà défilé, avec le bouton de retour
+   au-dessus de ce qu'on voyait. Il était là, mais hors de l'écran, et l'on ne
+   pouvait pas revenir choisir un autre tournoi (Pierre, 11/09/2026). */
+function remonterLaBoite(){
+  var boite = $("#tournoi");
+  try { if (boite) boite.scrollTop = 0; } catch (e) {}
+  var dedans = boite ? boite.querySelector(".salon__boite") : null;
+  try { if (dedans) dedans.scrollTop = 0; } catch (e) {}
 }
 
 function dessinerLesCartes(){
@@ -2525,10 +2565,12 @@ function ouvrirUneCarte(cle){
   var d = tousLesTournois || {};
   if (cle === "fanmi" && !d.fanmi){
     /* Personne ne m'a envoyé de lien : je peux en ouvrir un. */
+    ecran = "neuf";
     $("#tr-accueil").hidden = true;
     $("#tr-vivant").hidden = true;
     $("#tr-neuf").hidden = false;
     $("#tr-quitter").hidden = true;
+    remonterLaBoite();
     return;
   }
   var vue = d[cle];
@@ -2606,7 +2648,13 @@ function lancerTournoi(){
 /* ─────────────────────────────────────────────────── ce que l'on montre ── */
 
 function afficherTournoi(vue){
+  var change = !tournoi || tournoi.code !== vue.code || ecran !== "tournoi";
   tournoi = { code: vue.code, vue: vue };
+  ecran = "tournoi";
+  /* On ne remonte la boîte qu'en ARRIVANT dans un tournoi, jamais au
+     rafraîchissement : sinon le classement remonterait sous les doigts de
+     celui qui le lit, toutes les six secondes. */
+  if (change) remonterLaBoite();
   $("#tr-accueil").hidden = true;
   $("#tr-neuf").hidden = true;
   $("#tr-vivant").hidden = false;
