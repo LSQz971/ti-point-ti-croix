@@ -285,10 +285,20 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
 .tournoi__cTexte i{font-style:normal;font-size:11px;opacity:.9;color:#ffd666}
 .tournoi__cFleche{flex:0 0 auto;opacity:.45;font-size:18px}
 .tournoi__retour{
-  font:inherit;font-size:13px;padding:4px 0;margin-bottom:6px;cursor:pointer;
-  background:none;border:0;color:inherit;opacity:.75;
-  text-transform:none;letter-spacing:normal;font-weight:500;box-shadow:none;
+  /* ⚠️ UN RETOUR DOIT SE VOIR COMME UN BOUTON. Il était gris, sans contour,
+     large de 85 px et posé au-dessus du titre : sur un téléphone il se
+     lisait comme une étiquette, et l'on ne pouvait pas revenir choisir un
+     autre tournoi quand on avait tapé à côté (Pierre, 11/09/2026). Il prend
+     maintenant toute la largeur, avec un cadre et une flèche, comme le
+     premier geste de l'écran. */
+  display:flex;align-items:center;gap:8px;width:100%;cursor:pointer;
+  font:inherit;font-size:14px;font-weight:600;text-align:left;
+  padding:10px 12px;margin-bottom:10px;border-radius:10px;color:inherit;
+  border:1px solid rgba(255,255,255,.22);background:rgba(0,0,0,.26);
+  text-transform:none;letter-spacing:normal;box-shadow:none;
 }
+.tournoi__retour:hover{border-color:rgba(255,214,102,.5);background:rgba(0,0,0,.34)}
+.tournoi__retour span{font-size:18px;line-height:1;opacity:.8}
 .tournoi__reste{font-size:11.5px;opacity:.75}
 .tournoi__pieds{display:flex;flex-direction:column;gap:8px;margin-top:12px}
 .tournoi__rappel{border-top:1px dashed rgba(255,255,255,.18);margin-top:4px}
@@ -556,7 +566,7 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
 
     <!-- ══ ÉCRAN 2 : UN TOURNOI OUVERT ═══════════════════════════════════ -->
     <div id="tr-vivant" hidden>
-      <button class="tournoi__retour" id="tr-retour" type="button">‹ Les tournois</button>
+      <button class="tournoi__retour" id="tr-retour" type="button"><span>‹</span> Revenir aux trois tournois</button>
       <div class="tournoi__entete">
         <span class="tournoi__titre" id="tr-v-titre"></span>
         <span class="tournoi__sous" id="tr-v-sous"></span>
@@ -607,7 +617,7 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
     <!-- ══ ÉCRAN 3 : OUVRIR UN TOURNOI AN FANMI ══════════════════════════
          Le seul des trois qui se crée. Les deux autres existent tout seuls. -->
     <div id="tr-neuf" hidden>
-      <button class="tournoi__retour" id="tr-neuf-retour" type="button">‹ Les tournois</button>
+      <button class="tournoi__retour" id="tr-neuf-retour" type="button"><span>‹</span> Revenir aux trois tournois</button>
       <h2>Tournoi an fanmi</h2>
       <p class="salon__note">Un lien à partager avec la famille, les amis, les collègues.
         Dès qu'on a le lien, on entre et on joue contre quelqu'un du tournoi.</p>
