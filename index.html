@@ -2360,6 +2360,7 @@ var ecran = "accueil";
 var tousLesTournois = null;      /* la dernière réponse de /tournois */
 var sondage = null;              /* le rappel régulier, tant que la boîte est ouverte */
 var maPartieDeTournoi = null;    /* la partie de tournoi en cours, contre l'ordinateur */
+var reglagesAvantLeTournoi = null;   /* ce que le joueur avait choisi avant d'entrer */
 
 /* Des noms tout faits pour le tournoi an fanmi : c'est la friction du champ
    vide qui fait abandonner, pas le manque d'idées. Aucun ne reprend le nom
@@ -2440,6 +2441,12 @@ function quitterLeTournoi(){
   tournoi = null;
   maPartieDeTournoi = null;
   $("#difficulte").disabled = false;
+  /* SA TABLE À LUI REVIENT. C'est cela, « revenir sur une table hors
+     tournoi » : les réglages qu'il avait choisis avant d'y entrer. */
+  if (reglagesAvantLeTournoi){
+    $("#difficulte").value = reglagesAvantLeTournoi.difficulte;
+    reglagesAvantLeTournoi = null;
+  }
   try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
   $("#au-tournoi").hidden = true;
   $("#quitter-tournoi").hidden = true;
@@ -2481,7 +2488,7 @@ function quitterLeTournoi(){
     setTimeout(function(){ ouvrirFormulaire(resume); }, 900);
   }
 
-  dire("Tu as quitté le tournoi.");
+  dire("Tu as quitté le tournoi. Te voilà sur une partie ordinaire.");
 }
 
 /* Le tournoi ne bouge que quand une partie se termine : on demande de temps
@@ -3064,6 +3071,12 @@ function jouerMaPartie(vue){
   clearInterval(sondage); sondage = null;
   /* LE NIVEAU EST IMPOSÉ, ET LE MENU SE VERROUILLE : sans cela, on jouerait
      en facile un tournoi annoncé en moyenne, et le classement mentirait. */
+  /* ON GARDE SA TABLE À LUI AVANT DE LUI IMPOSER CELLE DU TOURNOI, et on la
+     lui rend en sortant : sans cela, il quitte le tournoi et se retrouve sur
+     les réglages du tournoi sans comprendre d'où ils sortent. */
+  if (!reglagesAvantLeTournoi){
+    reglagesAvantLeTournoi = { difficulte: $("#difficulte").value };
+  }
   $("#difficulte").value = vue.maPartie.niveau;
   $("#difficulte").disabled = true;
   maPartieDeTournoi = { code: tournoi.code, niveau: vue.maPartie.niveau };
