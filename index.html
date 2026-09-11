@@ -52,14 +52,38 @@ h1{
 }
 .soustitre{margin:0 0 18px;color:var(--encre-2);font-size:14px}
 
+/* ══ LA BARRE DE RÉGLAGES ════════════════════════════════════════════════
+   Refaite le 11/09/2026. Elle donnait trois réglages centrés de trois
+   largeurs différentes, puis deux boutons de tailles inégales : sur un
+   téléphone, cela se lisait comme un empilement sans ordre.
+   Chaque élément fait maintenant la MÊME largeur, et les deux boutons se
+   partagent la ligne à égalité. Sur un écran large, les trois réglages se
+   remettent d'eux-mêmes côte à côte : c'est la base de 210 px qui décide,
+   sans media query à entretenir. */
 .reglages{display:flex;flex-wrap:wrap;justify-content:center;gap:9px;margin-bottom:16px}
-.paire{display:flex;gap:9px;width:100%;justify-content:center}
-.paire button{flex:1 1 0;min-width:0;padding-left:10px;padding-right:10px}
 .reglages label{
-  display:flex;align-items:center;gap:7px;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
   background:rgba(4,38,18,.42);border:1px solid rgba(255,255,255,.10);
-  padding:6px 9px;border-radius:10px;font-size:12px;color:var(--encre-2);
-  flex:0 1 auto;min-width:0;
+  padding:7px 10px;border-radius:10px;font-size:12px;color:var(--encre-2);
+  flex:1 1 210px;max-width:340px;min-width:0;
+}
+ /* LES TROIS DÉROULANTS COMMENCENT AU MÊME ENDROIT. À largeur libre, ils
+    finissaient alignés à droite mais démarraient chacun ailleurs, et la
+    colonne était en dents de scie. Une base commune les met d'aplomb. */
+.reglages label select{flex:0 0 58%;min-width:0;padding:7px 6px;text-align:left}
+
+/* LES DEUX BOUTONS D'ACTION, À PART ÉGALE. Sans ce conteneur, la barre les
+   renvoyait chacun sur sa propre ligne ; et sans la règle `.paire #rejouer`,
+   « Rejouer » gardait son `flex:0 0 100%` d'origine et écrasait « Tournoi »
+   à 103 px contre 230 (constaté par Pierre le 11/09/2026). */
+.paire{display:flex;gap:9px;flex:1 1 100%;max-width:340px;margin:2px auto 0}
+.paire > button{flex:1 1 0;min-width:0;max-width:none;margin:0;height:46px;padding:0 8px;letter-spacing:.06em}
+.paire #rejouer{flex:1 1 0;max-width:none;margin:0}
+/* Ceux-là ne paraissent que dans une situation précise : ils prennent la
+   ligne entière, à la même largeur que le reste de la barre, pour qu'on les
+   remarque au lieu de les confondre avec les boutons permanents. */
+#quitter, #au-tournoi, #quitter-tournoi{
+  flex:0 0 100%;max-width:340px;margin:0 auto;height:44px;padding:0 12px;
 }
 select,button{font:inherit;border:0;border-radius:10px;cursor:pointer}
 select{
@@ -72,11 +96,11 @@ button{
   box-shadow:0 2px 0 rgba(0,0,0,.25);
 }
 button:hover{filter:brightness(1.08)}
-#rejouer{flex:0 0 100%;max-width:230px;margin:2px auto 0}
+#rejouer{flex:0 0 100%;max-width:340px;margin:2px auto 0}
 /* Le partage de la victoire. Vert, plus large que les réglages, il ne
    paraît qu'une fois la partie gagnée et il se voit tout de suite. */
 .partager{
-  flex:0 0 100%;max-width:230px;margin:6px auto 0;
+  flex:0 0 100%;max-width:340px;margin:6px auto 0;height:44px;padding:0 12px;
   background:#166B10;color:#fff;font-weight:700;
 }
 .bouton--pale{
