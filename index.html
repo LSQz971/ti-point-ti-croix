@@ -2658,6 +2658,7 @@ function ouvrirTournoi(){
 /* SORTIE 1 : on ferme la boîte, et rien ne change. */
 function fermerTournoi(){
   $("#tournoi").hidden = true;
+  $("#tr-fermer").hidden = false;
   $("#tr-fermer").textContent = "Revenir au jeu";
   $("#tr-retour").hidden = false;
   $("#tr-reprendre").hidden = true;
@@ -2770,6 +2771,7 @@ function quitterLeTournoi(){
     /* LE BOUTON DE SORTIE DIT OÙ IL MÈNE. « Revenir à ma JEU » ne disait pas
        qu'on sortait du tournoi, et l'on cherchait un autre bouton qui
        n'existait pas (Pierre, 11/09/2026). */
+    $("#tr-fermer").hidden = false;
     $("#tr-fermer").textContent = "Revenir au jeu, hors tournoi";
     $("#tr-v-partager").textContent = (m && m.g > 1) ? "Partager mes victoires"
                                     : ((m && m.g === 1) ? "Partager ma victoire" : "Partager mon résultat");
@@ -2894,6 +2896,12 @@ function montrerLAccueil(){
   $("#tr-neuf").hidden = true;
   $("#tr-quitter").hidden = true;
   $("#tr-reprendre").hidden = true;
+  /* ⚠️ SUR L'ACCUEIL DES TROIS TOURNOIS, CE BOUTON EST LA SEULE SORTIE : il
+     n'y a ici ni croix, ni clic sur le fond, ni bouton de jeu. Il se montre
+     donc toujours, et ne s'efface que sur l'écran d'un tournoi ouvert, où
+     « Jouer ma partie » fait déjà le même geste. */
+  $("#tr-fermer").hidden = false;
+  $("#tr-fermer").textContent = "Revenir au jeu";
   dessinerLesCartes();
   dessinerLeClassementGeneral();
   remonterLaBoite();
@@ -3089,6 +3097,7 @@ function afficherTournoi(vue){
   $("#tr-vivant").hidden = false;
   $("#tr-quitter").hidden = false;
   $("#tr-reprendre").hidden = true;
+  $("#tr-fermer").hidden = false;   /* montrerMonMatch l'efface s'il fait doublon */
   /* ON NE SE SOUVIENT QUE DES TOURNOIS OÙ L'ON JOUE VRAIMENT : regarder un
      classement sans y figurer ne doit pas coller le jeu à ce tournoi. */
   marquerMonTournoi(vue.maPlace >= 0 && !vue.fini ? vue.code : null);
@@ -3262,6 +3271,13 @@ function montrerMonMatch(vue){
         if (enCoursDeTournoi()){ fermerTournoi(); return; }
         jouerMaPartie(vue);
       });
+      /* ⚠️ ET PLUS DE « REVENIR À MA PARTIE » EN BAS (Pierre, 11/09/2026 :
+         « jouer ma partie et revenir à ma partie c'est la même chose,
+         effacer revenir à ma partie »). Les deux ramenaient bien à la même
+         grille. On garde celui qui porte le geste du tournoi, et le pied de
+         la boîte disparaît de cet écran. Il reste partout où il est la seule
+         sortie : sur l'accueil des trois tournois et sur l'écran de sortie. */
+      $("#tr-fermer").hidden = true;
     }
     return;
   }
