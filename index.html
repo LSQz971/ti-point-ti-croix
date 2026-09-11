@@ -637,6 +637,16 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
       <span class="salon__note-nom" id="tr-nom-note">Les autres joueurs le verront dans le classement.</span>
     </label>
 
+    <!-- ⚠️ LE CODE DE REPRISE (Pierre, 11/09/2026 : « il ne faut pas qu'un
+         nouveau joueur puisse utiliser le même nom »). Il ne paraît QUE
+         lorsqu'un nom déjà pris est réclamé : celui qui revient donne son
+         code et retrouve sa ligne, celui qui ne l'a pas choisit un autre
+         nom. Le reste du temps, personne ne le voit ni n'a à le taper. -->
+    <label class="salon__nom" id="tr-code-boite" hidden style="margin-bottom:4px">Ton code de reprise
+      <input id="tr-code" type="text" maxlength="8" placeholder="six caractères" autocomplete="off">
+      <span class="salon__note-nom" id="tr-code-note">Ce nom est déjà pris. Donne son code pour le reprendre, ou choisis un autre nom.</span>
+    </label>
+
     <!-- ══ ÉCRAN 1 : L'ACCUEIL. Les trois tournois, puis le classement. ══ -->
     <div id="tr-accueil">
       <h2>Tournois</h2>
@@ -2576,10 +2586,45 @@ function poserMonNom(n){
     fetch(SERVEUR + "/classement", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jeton: monJeton(), nom: propre })
-    }).then(function(){ rafraichirMonBilan(); }).catch(function(){});
+      body: JSON.stringify({ jeton: monJeton(), nom: propre, code: monCode() })
+    }).then(function(r){ return r.json().catch(function(){ return {}; }); })
+      .then(function(d){
+        /* LE SERVEUR EST LE GARDIEN DES NOMS : s'il refuse, la page ne garde
+           pas un nom qui n'est pas au tableau. */
+        if (d && d.erreur){ nomDejaPris(d); return; }
+        if (d && d.code){
+          garderMonCode(d.code);
+          var boite = $("#tr-code-boite");
+          if (boite) boite.hidden = true;
+          if ($("#tr-nom-note")){
+            $("#tr-nom-note").textContent = "Ton code de reprise : " + d.code +
+              ". Note-le : il te rendra ton nom sur un autre téléphone.";
+          }
+        }
+        rafraichirMonBilan();
+      }).catch(function(){});
   }
   return propre;
+}
+
+/* LE CODE DE REPRISE, rangé à côté du jeton : on l'envoie à chaque fois, et
+   le serveur ne le réclame que s'il en a besoin. */
+function monCode(){
+  try { return localStorage.getItem("tptc-code") || ""; } catch (e) { return ""; }
+}
+function garderMonCode(c){
+  if (!c) return;
+  try { localStorage.setItem("tptc-code", String(c)); } catch (e) {}
+}
+
+/* CE NOM EST DÉJÀ PRIS : on ouvre la case du code, et on ne garde surtout pas
+   le nom en mémoire, sinon la page afficherait un nom que le serveur refuse. */
+function nomDejaPris(d){
+  var boite = $("#tr-code-boite");
+  if (boite && d && d.besoinCode){ boite.hidden = false; $("#tr-code").focus(); }
+  if ($("#tr-nom-note")) $("#tr-nom-note").textContent = (d && d.erreur) || "Ce nom est déjà pris.";
+  try { localStorage.removeItem("tptc-nom"); } catch (e) {}
+  direQuiJeSuis();
 }
 
 function maLigneDuClassement(d){
@@ -3060,9 +3105,9 @@ function rejoindreTournoi(){
   fetch(SERVEUR + "/tournoi/" + tournoi.code + "/rejoindre", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jeton: monJeton(), nom: nom })
+    body: JSON.stringify({ jeton: monJeton(), nom: nom, code: monCode() })
   }).then(function(r){ return r.json(); }).then(function(d){
-    if (d.erreur){ $("#tr-nom-note").textContent = d.erreur; return; }
+    if (d.erreur){ nomDejaPris(d); return; }
     if (d.vue) afficherTournoi(d.vue);
   }).catch(function(){ dire("Le serveur ne répond pas."); });
 }
@@ -3540,6 +3585,11 @@ function brancherLesTournois(){
   $("#tr-neuf-retour").addEventListener("click", montrerLAccueil);
   $("#tr-creer").addEventListener("click", creerTournoi);
   $("#tr-rejoindre").addEventListener("click", rejoindreTournoi);
+  $("#tr-code").addEventListener("change", function(){
+    garderMonCode((this.value || "").trim());
+    var n = ($("#tr-nom").value || "").trim();
+    if (n) poserMonNom(n);
+  });
   $("#tr-v-lancer").addEventListener("click", lancerTournoi);
   $("#tr-v-partager").addEventListener("click", partagerMonTournoi);
   $("#tr-cartes").addEventListener("click", function(e){
