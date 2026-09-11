@@ -57,6 +57,9 @@ h1{
   display:flex;flex-wrap:wrap;justify-content:center;align-items:center;
   gap:6px;margin:0 0 14px;min-height:24px;font-size:13px;color:var(--encre-2);
 }
+/* MASQUÉ VEUT DIRE ABSENT : .moi est en display:flex, qui l'emporterait sur
+   le display:none de l'attribut hidden et laisserait une bande vide. */
+.moi[hidden]{display:none}
 .moi b{color:var(--encre);font-weight:800}
 .moi__sep{opacity:.5}
 /* LE NOM SE TOUCHE POUR SE CHANGER : il en garde la couleur de l'encre, sans
@@ -494,7 +497,7 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
        boîtes, et l'on n'entrait au classement qu'en rejoignant un tournoi.
        Cette ligne est la première chose sous le titre, et elle porte les
        quatre réponses : le nom, les victoires, le tournoi, et sa sortie. -->
-  <div class="moi" id="moi">
+  <div class="moi" id="moi" hidden>
     <span class="moi__qui" id="moi-qui"></span>
   </div>
 
@@ -651,7 +654,7 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
            n'est pas inscrit, c'est lui cacher la seule raison d'entrer. -->
       <div class="salon__convie" id="tr-v-entrer" hidden>
         <b id="tr-v-entrer-titre">Entre dans ce tournoi.</b>
-        <span id="tr-v-entrer-sous">Dis ton nom en haut, et te voilà dans le classement.</span>
+        <span id="tr-v-entrer-sous">Dis ton nom au-dessus, et te voilà dans le classement.</span>
         <button id="tr-rejoindre" type="button">Entrer dans le classement</button>
       </div>
 
@@ -2548,28 +2551,24 @@ function rafraichirMonBilan(){
     }).catch(function(){});
 }
 
-/* ⚠️ AUCUN CHAMP DE NOM ICI (Pierre, 11/09/2026 : « tu entres ton nom quand
-   tu arrives dans le tournoi, pourquoi un bouton pour changer de nom ? »).
-   Il a raison : le champ existe déjà en haut de la boîte des tournois, et
-   deux endroits pour dire la même chose, c'est deux endroits à tenir et un
-   joueur qui se demande lequel fait foi. On l'emmène donc au seul champ qui
-   existe, et cette ligne ne fait plus qu'AFFICHER. */
-function ouvrirMaSaisie(){
-  ouvrirTournoi();
-  var c = $("#tr-nom");
-  if (c){ try { c.focus(); c.select(); } catch (e) {} }
-}
-
+/* ⚠️ LE NOM NE SE DEMANDE QU'À L'ENTRÉE D'UN TOURNOI (Pierre, 11/09/2026 :
+   « tu dis ton nom seulement quand tu cliques sur un tournoi »). Cette ligne
+   n'existe donc pas tant qu'il n'y a pas de nom : elle réclamait quelque
+   chose sous le titre, avant que le joueur ait vu la moindre partie, et le
+   champ qui fait foi est déjà en haut de la boîte des tournois. Dès qu'un nom
+   est posé, elle reparaît et porte ses quatre réponses : qui tu es, ce que tu
+   as gagné, où tu es, et par où tu sors. */
 function direQuiJeSuis(){
   var qui = $("#moi-qui");
   if (!qui) return;
+  var bloc = $("#moi");
   var n = monNom();
   if (!n){
-    qui.innerHTML = '<button class="moi__lien" id="moi-dire" type="button">Dis ton nom</button>' +
-                    " et tu entres dans le classement.";
-    $("#moi-dire").addEventListener("click", ouvrirMaSaisie);
+    qui.innerHTML = "";
+    if (bloc) bloc.hidden = true;
     return;
   }
+  if (bloc) bloc.hidden = false;
   /* ⚠️ PLUS DE LIEN « CHANGER » À CÔTÉ DU NOM (Pierre, 11/09/2026 : « c'est
      quoi ce bouton changer ? il sert à rien ! »). Il disait à voix haute ce
      que le nom fait déjà : c'est LE NOM qu'on touche pour le changer, et un
@@ -3034,9 +3033,9 @@ function afficherTournoi(vue){
       ? (vue.inscrits + (vue.inscrits > 1 ? " joueurs sont déjà là." : " joueur est déjà là."))
       : "Personne n'est encore entré.";
     $("#tr-v-entrer-sous").textContent = vue.global
-      ? "Dis ton nom en haut de la page, et te voilà dans le classement."
+      ? "Dis ton nom au-dessus, et te voilà dans le classement."
       : (vue.lance ? "Le tournoi a commencé, les inscriptions sont fermées."
-                   : "Dis ton nom en haut de la page, et te voilà dans le classement.");
+                   : "Dis ton nom au-dessus, et te voilà dans le classement.");
     $("#tr-rejoindre").hidden = !vue.global && vue.lance;
   }
 
