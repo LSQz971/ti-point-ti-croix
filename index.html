@@ -96,8 +96,14 @@ h1{
    « Rejouer » gardait son `flex:0 0 100%` d'origine et écrasait « Tournoi »
    à 103 px contre 230 (constaté par Pierre le 11/09/2026). */
 .paire{display:flex;gap:9px;flex:1 1 100%;max-width:340px;margin:2px auto 0}
-.paire > button{flex:1 1 0;min-width:0;max-width:none;margin:0;height:46px;padding:0 8px;letter-spacing:.06em}
+.paire > button{
+  flex:1 1 0;min-width:0;max-width:none;margin:0;height:46px;padding:0 8px;
+  letter-spacing:.06em;white-space:nowrap;
+}
 .paire #rejouer{flex:1 1 0;max-width:none;margin:0}
+/* « QUITTER LE DÉFI » fait le double de « TOURNOI » en lettres. À chasse
+   égale il déborderait de sa moitié de barre, donc il la resserre. */
+.paire > button.paire__long{font-size:11.5px;letter-spacing:.01em;padding:0 4px}
 /* Ceux-là ne paraissent que dans une situation précise : ils prennent la
    ligne entière, à la même largeur que le reste de la barre, pour qu'on les
    remarque au lieu de les confondre avec les boutons permanents. */
@@ -495,8 +501,10 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
        Les quatre disent la même chose : la page ne disait NI qui tu es, NI
        ce que tu as gagné, NI où tu es. Le nom ne vivait qu'au fond de deux
        boîtes, et l'on n'entrait au classement qu'en rejoignant un tournoi.
-       Cette ligne est la première chose sous le titre, et elle porte les
-       quatre réponses : le nom, les victoires, le tournoi, et sa sortie. -->
+       Cette ligne est la première chose sous le titre, et elle porte les deux
+       réponses qui sont à soi : le nom et les victoires. Le défi en cours et
+       sa sortie ont quitté cette ligne le 11/09/2026 : ils tiennent dans le
+       bouton de la barre, qui dit « Quitter le défi » quand on y est. -->
   <div class="moi" id="moi" hidden>
     <span class="moi__qui" id="moi-qui"></span>
   </div>
@@ -535,7 +543,11 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
       <!-- LE TOURNOI EST UNE ACTION, PAS UN RÉGLAGE : il sort du menu
            « Mode » et se pose à côté de « Rejouer ». C'est lui qui fait
            circuler le jeu sur WhatsApp, il ne se cache pas dans un
-           déroulant. -->
+           déroulant.
+           ⚠️ CE BOUTON A DEUX LÉGENDES (Pierre, 11/09/2026). Hors défi il
+           dit « Tournoi » et ouvre les trois tournois ; dans un défi il dit
+           « Quitter le défi » et en sort. C'est majBoutonDuDefi() qui le
+           bascule, la légende écrite ici n'est que l'état de départ. -->
       <button id="tournoi-ouvrir" type="button">Tournoi</button>
     </div>
     <button id="quitter" type="button" hidden>Quitter la table</button>
@@ -548,12 +560,11 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
          n'a plus besoin de repasser par le classement pour jouer la suivante.
          La barre d'un joueur en tournoi tient donc en trois boutons :
          Rejouer, Tournoi, et Partager quand il a gagné. -->
-    <!-- ⚠️ PLUS DE BOUTON « QUITTER LE TOURNOI » ICI (Pierre, 11/09/2026 :
+    <!-- ⚠️ PAS DE TROISIÈME BOUTON DE SORTIE ICI (Pierre, 11/09/2026 :
          « quitter et quitter le tournoi c'est la même chose normalement »).
-         C'était vrai : les deux appelaient la même fonction, et l'écran de
-         jeu portait donc deux fois la même sortie. Celle qu'on garde est le
-         lien « quitter » de la ligne sous le titre : il est collé au nom du
-         tournoi, donc on voit ce qu'on quitte au moment où on le quitte. Le
+         L'écran de jeu n'a qu'une sortie de défi, et c'est « Quitter le défi »
+         juste au-dessus. Le lien « quitter » qui vivait sur la ligne du nom a
+         été supprimé le même jour : c'est lui qui est devenu ce bouton. Le
          bouton de la boîte des tournois (#tr-quitter) reste, lui : il sert
          dans un autre écran, celui du tournoi ouvert. -->
     <!-- LA VICTOIRE SE MONTRE. C'est le moteur du jeu : une partie gagnée
@@ -2711,6 +2722,7 @@ function rafraichirMonBilan(){
    est posé, elle reparaît et porte ses quatre réponses : qui tu es, ce que tu
    as gagné, où tu es, et par où tu sors. */
 function direQuiJeSuis(){
+  majBoutonDuDefi();
   var qui = $("#moi-qui");
   if (!qui) return;
   var bloc = $("#moi");
@@ -2732,16 +2744,34 @@ function direQuiJeSuis(){
     html += ' <span class="moi__sep">·</span> <b>' + monBilan.v + "</b> " +
             (monBilan.v > 1 ? "victoires" : "victoire");
   }
-  /* ET OÙ JE SUIS : le tournoi se dit ici, avec sa sortie à portée de doigt.
-     Le bouton « Quitter le tournoi » est dans la barre des réglages, mais il
-     n'y apparaît qu'en tournoi : quand on ne sait pas si l'on y est, on ne
-     sait pas non plus qu'il existe. */
-  if (tournoi && tournoi.vue){
-    html += ' <span class="moi__sep">·</span> ' + echapper(tournoi.vue.nom) +
-            ' <button class="moi__lien" id="moi-quitter" type="button">quitter</button>';
-  }
+  /* ⚠️ PLUS DE NOM DE DÉFI NI DE LIEN « QUITTER » SUR CETTE LIGNE (Pierre,
+     11/09/2026 : « supprimer Défi du vendredi quitter »). La ligne sous le
+     titre ne porte plus que ce qui est à soi et ne bouge pas : le nom et les
+     victoires. Où l'on est et par où l'on sort, c'est le bouton de la barre
+     qui le dit maintenant, en toutes lettres et à la taille du doigt, au lieu
+     d'un mot souligné collé au bout d'une phrase. */
   qui.innerHTML = html;
-  if ($("#moi-quitter")) $("#moi-quitter").addEventListener("click", quitterLeTournoi);
+}
+
+/* ═══ LE BOUTON DE DROITE DIT CE QU'IL FAIT, SELON OÙ L'ON EST ════════════
+   Posé le 11/09/2026 (Pierre : « renommer le bouton tournoi en QUITTER LE
+   DÉFI »). Le lien « quitter » venait de disparaître de la ligne du haut : la
+   sortie remonte donc sur le bouton, qui est le seul endroit de cet écran
+   qu'on regarde vraiment.
+   Il garde ses deux états parce qu'ils ne se chevauchent jamais : dans un
+   défi, il en sort ; hors d'un défi, il n'y a rien à quitter et c'est la
+   seule porte d'entrée des trois tournois. Un bouton figé sur « Quitter le
+   défi » fermerait cette porte pour de bon. */
+function majBoutonDuDefi(){
+  var b = $("#tournoi-ouvrir");
+  if (!b) return;
+  var dedans = !!(tournoi && tournoi.vue);
+  b.textContent = dedans ? "Quitter le défi" : "Tournoi";
+  /* LA LÉGENDE LONGUE NE DOIT PAS SE COUPER EN DEUX : à part égale avec
+     « Rejouer », « QUITTER LE DÉFI » frôle la largeur disponible sur un
+     téléphone. La classe resserre la chasse au lieu de laisser le mot passer
+     à la ligne dans un bouton de 46 px de haut. */
+  b.classList.toggle("paire__long", dedans);
 }
 
 /* ─────────────────────────────────────────────── ouvrir, fermer, quitter ── */
@@ -2995,6 +3025,7 @@ function chargerLesTournois(silencieux){
 function montrerLAccueil(){
   tournoi = null;
   ecran = "accueil";
+  majBoutonDuDefi();   /* plus de défi ouvert : le bouton redevient l'entrée */
   $("#tr-accueil").hidden = false;
   $("#tr-vivant").hidden = true;
   $("#tr-neuf").hidden = true;
@@ -3192,6 +3223,7 @@ function afficherTournoi(vue){
   var change = !tournoi || tournoi.code !== vue.code || ecran !== "tournoi";
   tournoi = { code: vue.code, vue: vue };
   ecran = "tournoi";
+  majBoutonDuDefi();   /* on entre dans un défi : le bouton devient sa sortie */
   /* On ne remonte la boîte qu'en ARRIVANT dans un tournoi, jamais au
      rafraîchissement : sinon le classement remonterait sous les doigts de
      celui qui le lit, toutes les six secondes. */
@@ -3664,7 +3696,10 @@ function jouerMonMatch(m){
 
 /* Tous les boutons de la boîte, branchés d'un coup au démarrage. */
 function brancherLesTournois(){
-  $("#tournoi-ouvrir").addEventListener("click", ouvrirTournoi);
+  /* UN SEUL BOUTON, DEUX GESTES, CELUI QUE SA LÉGENDE ANNONCE. */
+  $("#tournoi-ouvrir").addEventListener("click", function(){
+    if (tournoi && tournoi.vue) quitterLeTournoi(); else ouvrirTournoi();
+  });
   $("#tr-fermer").addEventListener("click", fermerTournoi);
   $("#tr-quitter").addEventListener("click", quitterLeTournoi);
   $("#tr-reprendre").addEventListener("click", retournerDansLeTournoi);
