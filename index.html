@@ -50,7 +50,29 @@ h1{
   margin:0 0 4px;font-size:clamp(24px,6vw,40px);font-weight:900;
   letter-spacing:.06em;text-transform:uppercase;color:var(--encre);
 }
-.soustitre{margin:0 0 18px;color:var(--encre-2);font-size:14px}
+.soustitre{margin:0 0 8px;color:var(--encre-2);font-size:14px}
+/* LA LIGNE « QUI JE SUIS ». Elle tient sur une ligne, elle passe à la ligne
+   toute seule sur un téléphone, et elle ne pousse jamais la grille. */
+.moi{
+  display:flex;flex-wrap:wrap;justify-content:center;align-items:center;
+  gap:6px;margin:0 0 14px;min-height:24px;font-size:13px;color:var(--encre-2);
+}
+.moi b{color:var(--encre);font-weight:800}
+.moi__sep{opacity:.5}
+.moi__lien{
+  background:none;border:0;padding:0;margin:0;width:auto;height:auto;
+  color:var(--or);font:inherit;letter-spacing:0;text-transform:none;
+  text-decoration:underline;cursor:pointer;box-shadow:none;
+}
+.moi__forme{display:flex;gap:6px;align-items:center;flex:0 0 auto}
+.moi__forme input{
+  width:150px;padding:6px 9px;border-radius:8px;border:1px solid var(--trait);
+  background:rgba(0,0,0,.18);color:var(--encre);font:inherit;
+}
+.moi__forme button{
+  width:auto;height:auto;margin:0;padding:6px 12px;font:inherit;
+  letter-spacing:.04em;
+}
 
 /* ══ LA BARRE DE RÉGLAGES ════════════════════════════════════════════════
    Refaite le 11/09/2026. Elle donnait trois réglages centrés de trois
@@ -467,6 +489,25 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
 
   <h1>Ti Point Ti Croix</h1>
   <p class="soustitre">Le jeu traditionnel antillais</p>
+
+  <!-- ═══ QUI JE SUIS, ET OÙ JE SUIS ═══════════════════════════════════
+       Posé le 11/09/2026 sur quatre constats de Pierre le même jour :
+       « pourquoi je ne me vois pas dans le classement », « je veux le nom du
+       joueur quelque part sur cette page », « comment je fais pour quitter
+       le tournoi », « pourquoi je ne vois pas mon nombre de victoires ».
+       Les quatre disent la même chose : la page ne disait NI qui tu es, NI
+       ce que tu as gagné, NI où tu es. Le nom ne vivait qu'au fond de deux
+       boîtes, et l'on n'entrait au classement qu'en rejoignant un tournoi.
+       Cette ligne est la première chose sous le titre, et elle porte les
+       quatre réponses : le nom, les victoires, le tournoi, et sa sortie. -->
+  <div class="moi" id="moi">
+    <span class="moi__qui" id="moi-qui"></span>
+    <form class="moi__forme" id="moi-forme" autocomplete="off" hidden>
+      <input id="moi-saisie" type="text" maxlength="18" placeholder="Ton prénom"
+             aria-label="Ton nom de joueur">
+      <button type="submit">OK</button>
+    </form>
+  </div>
 
   <div class="reglages">
     <label>Mode
@@ -1898,8 +1939,10 @@ function exigerLeNom(){
   var champ = $("#salon-nom"), n = (champ.value || "").trim();
   if (n){
     champ.classList.remove("manque");
-    try { localStorage.setItem("tptc-nom", n); } catch (e) {}
-    return n.slice(0, 18);
+    /* LE NOM EST LE MÊME PARTOUT : il passe par poserMonNom, qui le garde,
+       le met dans l'autre champ, l'affiche sous le titre et le porte au
+       classement. */
+    return poserMonNom(n);
   }
   champ.classList.add("manque");
   champ.focus();
@@ -2430,6 +2473,7 @@ function reprendreMonTournoi(){
       tournoi = { code: vue.code, vue: vue };
       $("#au-tournoi").hidden = false;
       $("#quitter-tournoi").hidden = false;
+      direQuiJeSuis();
     })
     .catch(function(){});
 }
@@ -2454,13 +2498,104 @@ function trExigerLeNom(){
   var champ = $("#tr-nom"), n = (champ.value || "").trim();
   if (n){
     champ.classList.remove("manque");
-    try { localStorage.setItem("tptc-nom", n); } catch (e) {}
-    return n.slice(0, 18);
+    /* LE NOM EST LE MÊME PARTOUT : il passe par poserMonNom, qui le garde,
+       le met dans l'autre champ, l'affiche sous le titre et le porte au
+       classement. */
+    return poserMonNom(n);
   }
   champ.classList.add("manque");
   champ.focus();
   $("#tr-nom-note").textContent = "Il faut un nom pour entrer dans le classement.";
   return null;
+}
+
+/* ═══ QUI JE SUIS, ET OÙ JE SUIS ═════════════════════════════════════════
+   Le nom vivait dans deux champs, au fond de deux boîtes qu'il fallait
+   ouvrir pour les voir, et l'on n'entrait au classement de tout le monde
+   qu'en rejoignant un tournoi : celui qui jouait seul contre l'ordinateur,
+   même en gagnant trois fois, ne figurait nulle part et ne pouvait pas le
+   savoir. Ces quatre fonctions tiennent la ligne sous le titre. */
+var monBilan = null;      /* ma ligne du classement de tout le monde */
+
+function monNom(){
+  try { return (localStorage.getItem("tptc-nom") || "").trim(); } catch (e) { return ""; }
+}
+
+/* DIRE SON NOM SUFFIT POUR ENTRER AU CLASSEMENT : c'est la règle écrite dans
+   le serveur depuis le premier jour, elle s'applique enfin depuis la page. */
+function poserMonNom(n){
+  var propre = String(n || "").trim().slice(0, 18);
+  if (!propre) return "";
+  try { localStorage.setItem("tptc-nom", propre); } catch (e) {}
+  if ($("#tr-nom")) $("#tr-nom").value = propre;
+  if ($("#salon-nom")) $("#salon-nom").value = propre;
+  direQuiJeSuis();
+  if (SERVEUR){
+    fetch(SERVEUR + "/classement", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jeton: monJeton(), nom: propre })
+    }).then(function(){ rafraichirMonBilan(); }).catch(function(){});
+  }
+  return propre;
+}
+
+function maLigneDuClassement(d){
+  var cl = d && d.classement;
+  if (!cl) return null;
+  var l = cl.lignes || [];
+  for (var i = 0; i < l.length; i++) if (l[i].moi) return l[i];
+  return cl.moi || null;
+}
+
+function rafraichirMonBilan(){
+  if (!SERVEUR || !monNom()) return;
+  fetch(SERVEUR + "/tournois?jeton=" + encodeURIComponent(monJeton()))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      tousLesTournois = d;
+      monBilan = maLigneDuClassement(d);
+      direQuiJeSuis();
+    }).catch(function(){});
+}
+
+function ouvrirMaSaisie(){
+  var f = $("#moi-forme"), c = $("#moi-saisie");
+  f.hidden = false;
+  c.value = monNom();
+  c.focus();
+  try { c.select(); } catch (e) {}
+}
+
+function direQuiJeSuis(){
+  var qui = $("#moi-qui");
+  if (!qui) return;
+  var n = monNom();
+  if (!n){
+    qui.innerHTML = '<button class="moi__lien" id="moi-dire" type="button">Dis ton nom</button>' +
+                    " et tu entres dans le classement.";
+    $("#moi-dire").addEventListener("click", ouvrirMaSaisie);
+    return;
+  }
+  var html = "<b>" + echapper(n) + "</b>" +
+             ' <button class="moi__lien" id="moi-changer" type="button">changer</button>';
+  /* ⚠️ LE CHIFFRE S'AFFICHE MÊME À ZÉRO. Zéro victoire est un chiffre, et
+     c'est celui qu'on cherche à faire monter. */
+  if (monBilan){
+    html += ' <span class="moi__sep">·</span> <b>' + monBilan.v + "</b> " +
+            (monBilan.v > 1 ? "victoires" : "victoire");
+  }
+  /* ET OÙ JE SUIS : le tournoi se dit ici, avec sa sortie à portée de doigt.
+     Le bouton « Quitter le tournoi » est dans la barre des réglages, mais il
+     n'y apparaît qu'en tournoi : quand on ne sait pas si l'on y est, on ne
+     sait pas non plus qu'il existe. */
+  if (tournoi && tournoi.vue){
+    html += ' <span class="moi__sep">·</span> ' + echapper(tournoi.vue.nom) +
+            ' <button class="moi__lien" id="moi-quitter" type="button">quitter</button>';
+  }
+  qui.innerHTML = html;
+  $("#moi-changer").addEventListener("click", ouvrirMaSaisie);
+  if ($("#moi-quitter")) $("#moi-quitter").addEventListener("click", quitterLeTournoi);
 }
 
 /* ─────────────────────────────────────────────── ouvrir, fermer, quitter ── */
@@ -2629,6 +2764,8 @@ function quitterLeTournoi(){
     $("#tr-v-note").hidden = true;
   }
 
+  direQuiJeSuis();
+  rafraichirMonBilan();
   dire("Tu as quitté le tournoi. Te voilà sur une partie ordinaire.");
 }
 
@@ -2654,6 +2791,8 @@ function chargerLesTournois(silencieux){
   if (mien) url += "&fanmi=" + encodeURIComponent(mien);
   fetch(url).then(function(r){ return r.json(); }).then(function(d){
     tousLesTournois = d;
+    monBilan = maLigneDuClassement(d);
+    direQuiJeSuis();
     if (tournoi && tournoi.code){
       /* Un tournoi est ouvert à l'écran : on le rafraîchit avec ce que la
          même requête vient de rendre, sans en relancer une seconde. */
@@ -3230,6 +3369,7 @@ function jouerMaPartie(vue){
   $("#mode").value = "ordinateur";
   $("#au-tournoi").hidden = false;
   $("#quitter-tournoi").hidden = false;
+  direQuiJeSuis();
   nouvellePartie();
   dire(vue.maPartie.parties
     ? ("Partie " + (vue.maPartie.jouees + 1) + " sur " + vue.maPartie.parties + " du " + vue.nom + ".")
@@ -3259,6 +3399,7 @@ function rapporterMaPartie(message, cellules){
     var reste = d.reste;
     dire((gagne ? "🎉 " : "") + "Comptée pour le tournoi." +
          (reste ? " Il t'en reste " + reste + "." : (reste === 0 ? " C'était ta dernière." : "")));
+    rafraichirMonBilan();
     if (d.vue){
       tournoi = { code: mienne.code, vue: d.vue };
       /* La partie qu'on vient de rapporter a pu clore le tournoi alors que la
@@ -3345,6 +3486,15 @@ function brancherLesTournois(){
      test_moteur.js et test_serveur.js chargent ce script et coupent sur la
      PREMIÈRE occurrence de la fermeture d'une telle fonction. Une de plus
      dans le fichier, et les deux bancs de tests ne mesurent plus rien. */
+  /* LA LIGNE « QUI JE SUIS », branchée et rendue tout de suite : elle est
+     visible avant même que le serveur ait répondu. */
+  $("#moi-forme").addEventListener("submit", function(e){
+    e.preventDefault();
+    if (poserMonNom($("#moi-saisie").value)) $("#moi-forme").hidden = true;
+  });
+  direQuiJeSuis();
+  rafraichirMonBilan();
+
   poserLesNomsTouFaits();
   reprendreMonTournoi();
 }
