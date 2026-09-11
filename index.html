@@ -102,8 +102,13 @@ h1{
 }
 .paire #rejouer{flex:1 1 0;max-width:none;margin:0}
 /* « QUITTER LE DÉFI » fait le double de « TOURNOI » en lettres. À chasse
-   égale il déborderait de sa moitié de barre, donc il la resserre. */
-.paire > button.paire__long{font-size:11.5px;letter-spacing:.01em;padding:0 4px}
+   égale il déborderait de sa moitié de barre, donc il la resserre.
+   ⚠️ ON NE TOUCHE PAS AU PADDING : ces boutons sont en `content-box`, donc un
+   padding plus étroit RÉTRÉCIT le bouton au lieu de lui laisser plus de place.
+   Mesuré le 11/09/2026 : avec `padding:0 4px`, « Quitter le défi » faisait
+   136 px contre 144 à « Rejouer », et la rangée n'était plus d'aplomb. Seule
+   la chasse des lettres se resserre. */
+.paire > button.paire__long{font-size:11.5px;letter-spacing:.01em}
 /* Ceux-là ne paraissent que dans une situation précise : ils prennent la
    ligne entière, à la même largeur que le reste de la barre, pour qu'on les
    remarque au lieu de les confondre avec les boutons permanents. */
