@@ -2310,7 +2310,14 @@ function nouvellePartie(){
 
 function rejouer(){
   etat.parties++; sauver();
-  if (TALLY && !etat.forme) setTimeout(ouvrirFormulaire, 260);
+  /* ⚠️ AUCUN FORMULAIRE ENTRE DEUX PARTIES DE TOURNOI (Pierre, 11/09/2026).
+     Il ne paraît qu'à la FIN : quand le tournoi se clôt, ou quand on le
+     quitte. Entre deux parties d'un même tournoi, la question tombe au
+     milieu d'un élan, et elle casse exactement ce qu'on cherche à
+     entretenir. Hors tournoi, il revient à chaque relance comme avant. */
+  if (TALLY && !etat.forme && !tournoi && !maPartieDeTournoi){
+    setTimeout(ouvrirFormulaire, 260);
+  }
   /* En ligne, on ne rebat pas les cartes soi-même : on demande à l'arbitre,
      et les deux écrans repartent ensemble. */
   if (enLigne()){ envoyerEnLigne({ t: "relancer" }); return; }
@@ -2425,6 +2432,11 @@ function fermerTournoi(){
    son lien de l'adresse pour qu'un rechargement n'y ramène pas, et l'on rend
    au joueur ses menus et sa partie. */
 function quitterLeTournoi(){
+  /* ON GARDE LA VUE AVANT DE TOUT EFFACER : c'est elle qui porte le rang et
+     les victoires, et c'est ce qu'on va proposer de partager. */
+  var vue = (tournoi && tournoi.vue) ? tournoi.vue : null;
+  var jetais = !!vue && vue.maPlace >= 0;
+
   tournoi = null;
   maPartieDeTournoi = null;
   $("#difficulte").disabled = false;
@@ -2434,6 +2446,41 @@ function quitterLeTournoi(){
   $("#tournoi").hidden = true;
   clearInterval(sondage); sondage = null;
   if (enLigne()) quitterLaTable();
+
+  /* ON REVIENT À LA GRILLE DE BASE, avec la barre réduite à ses deux boutons
+     permanents : « Rejouer » et « Tournoi ». C'est l'écran d'un joueur qui
+     n'est dans aucun tournoi, et il doit être exactement celui-là. */
+  nouvellePartie();
+
+  /* ⚠️ LE PARTAGE VIENT APRÈS LA PARTIE NEUVE, ET PAS AVANT : la relance
+     efface le bouton de partage de la victoire précédente. Posé dans cet
+     ordre, il porte les victoires du tournoi qu'on vient de quitter. */
+  if (jetais){
+    var moi = null, cl = vue.classement || [];
+    for (var i = 0; i < cl.length; i++) if (cl[i].place === vue.maPlace) moi = cl[i];
+    var v = moi ? moi.g : 0;
+    var b = $("#partager");
+    if (b){
+      b.dataset.texte = texteDePartage(vue);
+      b.textContent = v > 1 ? "Partager mes victoires"
+                    : (v === 1 ? "Partager ma victoire" : "Partager mon résultat");
+      b.hidden = false;
+    }
+  }
+
+  /* ET LE FORMULAIRE, parce que quitter un tournoi est un moment de fin, au
+     même titre que sa clôture : on vient de voir son classement, c'est là
+     qu'on accepte de laisser son numéro. Les mêmes garde-fous qu'à la
+     clôture : seulement si l'on a joué, et jamais si l'on a déjà répondu
+     sur l'un des trois jeux. */
+  if (jetais && TALLY && !etat.forme){
+    var moi2 = null, cl2 = vue.classement || [];
+    for (var k = 0; k < cl2.length; k++) if (cl2[k].place === vue.maPlace) moi2 = cl2[k];
+    var resume = "tournoi-quitte:" + vue.nom +
+      (moi2 ? (":" + moi2.rang + (moi2.rang === 1 ? "er" : "e") + ":" + moi2.g + "v") : "");
+    setTimeout(function(){ ouvrirFormulaire(resume); }, 900);
+  }
+
   dire("Tu as quitté le tournoi.");
 }
 
