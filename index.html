@@ -705,6 +705,11 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
 
       <h3>Classement</h3>
       <div id="tr-v-classement"></div>
+
+      <!-- ⚠️ LA SEMAINE D'AVANT, FIGÉE (Pierre, 11/09/2026). Elle se lit sous
+           celle qui court : on voit d'un coup d'œil qui a gagné la dernière
+           fois, et c'est cela qui donne envie de reprendre sa place. -->
+      <div id="tr-v-avant" hidden></div>
       <div id="tr-v-rondes"></div>
       <p class="salon__note" id="tr-v-note" hidden></p>
       <p class="salon__note" id="tr-v-journal"></p>
@@ -2821,6 +2826,7 @@ function quitterLeTournoi(){
     $("#tr-v-partager").textContent = (m && m.g > 1) ? "Partager mes victoires"
                                     : ((m && m.g === 1) ? "Partager ma victoire" : "Partager mon résultat");
     dessinerClassement(vue);
+    dessinerLaSemaineDavant(vue);
     dessinerLesRondes(vue);
     $("#tr-v-journal").textContent = (vue.journal || []).slice(-3).join("  ");
     remonterLaBoite();
@@ -3344,6 +3350,34 @@ function montrerMonMatch(vue){
       '<button id="tr-jouer" type="button">Jouer mon match</button>';
     $("#tr-jouer").addEventListener("click", function(){ jouerMonMatch(m); });
   }
+}
+
+/* LE CLASSEMENT DE LA SEMAINE D'AVANT, tel qu'il s'est figé le vendredi à
+   18 h. Il ne paraît que sur le Défi du vendredi, et seulement si quelqu'un y
+   a joué : un tableau vide ne raconte rien. */
+function dessinerLaSemaineDavant(vue){
+  var bloc = $("#tr-v-avant");
+  if (!bloc) return;
+  var v = (tousLesTournois || {}).vendrediAvant;
+  var cl = (v && v.classement) || [];
+  var laSemaine = vue && vue.global && String(vue.code || "").charAt(0) === "v";
+  if (!laSemaine || !cl.length){ bloc.hidden = true; bloc.innerHTML = ""; return; }
+
+  var html = '<h3>La semaine dernière</h3><div class="tournoi__barre">';
+  for (var i = 0; i < cl.length && i < 5; i++){
+    var x = cl[i];
+    html += '<div class="tournoi__rang">' +
+      '<span class="tournoi__place">' + x.rang + "</span>" +
+      '<span class="tournoi__qui"><b>' + echapper(x.nom) + "</b><em>" +
+      x.j + (x.j > 1 ? " parties jouées" : " partie jouée") + "</em></span>" +
+      '<span class="tournoi__score"><b>' + x.g + "</b><small>" +
+      (x.g > 1 ? "victoires" : "victoire") + "</small></span>" +
+      "</div>";
+  }
+  html += "</div>";
+  if (cl.length > 5) html += '<p class="salon__note">et ' + (cl.length - 5) + " autres.</p>";
+  bloc.innerHTML = html;
+  bloc.hidden = false;
 }
 
 function dessinerClassement(vue){
