@@ -3086,6 +3086,12 @@ function dessinerLesCartes(){
     } else if (vue){
       mien = vue.maPlace >= 0;
       var bouts = [];
+      /* ⚠️ LE NIVEAU SE LIT DÈS LA CARTE (Pierre, 11/09/2026 : « les niveaux
+         de difficulté soient VISIBLES »). Il était déjà dit dans le tournoi
+         ouvert et dans le bloc « ma partie », mais pas ici : on devait donc
+         entrer dans un tournoi pour savoir contre quelle force on allait
+         jouer, alors que c'est ce qui dit ce que vaudra une victoire. */
+      if (vue.niveau) bouts.push("en " + vue.niveau);
       bouts.push(vue.inscrits + (vue.inscrits > 1 ? " joueurs" : " joueur"));
       if (vue.classement && vue.classement.length && vue.classement[0].g){
         bouts.push("en tête : " + echapper(vue.classement[0].nom) + ", " +
