@@ -331,6 +331,11 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
 .tournoi__vide{font-size:13px;opacity:.7;padding:10px 2px;line-height:1.5}
 /* Le bilan de sortie : le chiffre des victoires se lit d'un coup d'œil,
    c'est lui qu'on est venu chercher. */
+.tournoi__lien{
+  font:inherit;font-size:12px;padding:0;border:0;background:none;cursor:pointer;
+  color:#ffd666;text-decoration:underline;text-transform:none;letter-spacing:normal;
+  box-shadow:none;font-weight:600;
+}
 .tournoi__bilan{font-size:14px;opacity:.95}
 .tournoi__bilan b{font-size:20px;font-weight:800;color:#ffd666}
 .tournoi__partager{
@@ -649,6 +654,7 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
       <h3>Classement</h3>
       <div id="tr-v-classement"></div>
       <div id="tr-v-rondes"></div>
+      <p class="salon__note" id="tr-v-note" hidden></p>
       <p class="salon__note" id="tr-v-journal"></p>
     </div>
 
@@ -2599,6 +2605,28 @@ function quitterLeTournoi(){
        arrive quand la lecture est finie. */
     formulaireEnAttente = "tournoi-quitte:" + vue.nom +
       (moi2 ? (":" + moi2.rang + (moi2.rang === 1 ? "er" : "e") + ":" + moi2.g + "v") : "");
+  }
+
+  /* ⚠️ ON DIT POURQUOI LA QUESTION NE VIENT PAS, ET ON LAISSE LA REPOSER.
+     Le formulaire se tait dès que le repère partagé des trois jeux est posé.
+     C'est la règle, et elle est bonne : on ne redemande jamais un numéro déjà
+     donné. Mais quand il se tait, RIEN NE LE DISAIT : on croyait à une panne
+     (Pierre, 11/09/2026, et il avait raison de douter, le repère peut se
+     poser sans qu'on s'en souvienne). La ligne ci-dessous le dit, et le lien
+     efface le repère pour qui veut redonner ses coordonnées, par exemple
+     après un changement de numéro. */
+  if (jetais && TALLY && etat.forme){
+    $("#tr-v-note").hidden = false;
+    $("#tr-v-note").innerHTML = "Tes coordonnées sont déjà chez nous, on ne te les redemande pas. " +
+      '<button class="tournoi__lien" id="tr-redonner" type="button">Les redonner</button>';
+    $("#tr-redonner").addEventListener("click", function(){
+      etat.forme = false; sauver();
+      try { localStorage.removeItem(LSQZ_INSCRIT); } catch (e) {}
+      $("#tr-v-note").textContent = "C'est noté. La question revient en fermant cet écran.";
+      formulaireEnAttente = formulaireEnAttente || ("tournoi-quitte:" + (dernierTournoi ? dernierTournoi.nom : ""));
+    });
+  } else {
+    $("#tr-v-note").hidden = true;
   }
 
   dire("Tu as quitté le tournoi. Te voilà sur une partie ordinaire.");
