@@ -307,6 +307,31 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
    colonnes de lettres sur un téléphone de 375 px, personne ne les lit. Une
    ligne par joueur, le rang à gauche, le nom, et LE NOMBRE DE VICTOIRES en
    gros à droite : c'est ce que le mode promet, c'est donc ce qui se voit. */
+/* LES ONGLETS DES CLASSEMENTS. Trois au plus, à part égale, assez hauts pour
+   le pouce, et celui qu'on lit se détache en or. */
+/* LES DEUX SEMAINES, DEUX COLONNES DÈS QU'IL Y A LA PLACE.
+   ⚠️ LE SEUIL SE MESURE DANS LA BOÎTE, PAS DANS L'ÉCRAN. La boîte des tournois
+   plafonne à 520 px, soit 482 px utiles : à 260 px par colonne il en fallait
+   534, et les deux semaines restaient empilées même sur un grand écran
+   (mesuré le 11/09/2026). À 210 px elles passent à deux colonnes de 234 px dès
+   que la boîte est pleine largeur, et restent empilées sur un téléphone, où
+   deux colonnes ne seraient de toute façon pas lisibles. */
+.tournoi__semaines{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start}
+.tournoi__semaine{flex:1 1 210px;min-width:0}
+.tournoi__semaine h3{margin-top:0}
+.tournoi__onglets{display:flex;gap:6px;margin:8px 0 10px}
+.tournoi__onglets button{
+  flex:1 1 0;min-width:0;font:inherit;font-size:12px;font-weight:700;
+  height:34px;padding:0 6px;border-radius:9px;cursor:pointer;
+  background:rgba(4,38,18,.52);color:var(--encre-2);
+  border:1px solid rgba(255,255,255,.16);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  letter-spacing:0;text-transform:none;box-shadow:none;margin:0;height:34px;
+}
+.tournoi__onglets button.actif{
+  background:rgba(255,214,102,.16);color:var(--encre);
+  border-color:rgba(255,214,102,.5);
+}
 .tournoi__rang{
   display:flex;align-items:center;gap:10px;padding:9px 4px;text-align:left;
   border-bottom:1px solid rgba(255,255,255,.07);
@@ -701,6 +726,11 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
       <div class="tournoi__cartes" id="tr-cartes"></div>
 
       <h3 id="tr-cl-titre">Le classement de tout le monde</h3>
+      <!-- LES TROIS DIFFICULTÉS ONT CHACUNE LEUR CLASSEMENT (Pierre,
+           11/09/2026). Celui qui compte le plus de joueurs s'ouvre, les deux
+           autres attendent derrière leur onglet : on voit d'abord là où il se
+           passe quelque chose, sans perdre les deux autres. -->
+      <div class="tournoi__onglets" id="tr-cl-onglets" hidden></div>
       <div id="tr-classement"></div>
     </div>
 
@@ -748,13 +778,24 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
            autres se ferment à l'heure, tout seuls. -->
       <button class="bouton--pale" id="tr-v-clore" type="button" hidden style="margin-top:8px;width:100%">Clore le tournoi et proclamer le classement</button>
 
-      <h3>Classement</h3>
-      <div id="tr-v-classement"></div>
+      <!-- ⚠️ LES DEUX SEMAINES CÔTE À CÔTE (Pierre, 11/09/2026 : « la semaine
+           prochaine le classement de la semaine précédente et le classement de
+           la semaine en cours seront côte à côte, pour les 2 jeux »). Celle
+           qui court à gauche, celle qui vient de finir à droite : on voit du
+           même regard où l'on en est et qui il faut rattraper. Sous 560 px il
+           n'y a pas la place de deux colonnes lisibles, elles s'empilent
+           alors, celle qui court toujours en premier. -->
+      <div class="tournoi__semaines">
+        <div class="tournoi__semaine">
+          <h3>Classement</h3>
+          <div id="tr-v-classement"></div>
+        </div>
 
       <!-- ⚠️ LA SEMAINE D'AVANT, FIGÉE (Pierre, 11/09/2026). Elle se lit sous
            celle qui court : on voit d'un coup d'œil qui a gagné la dernière
            fois, et c'est cela qui donne envie de reprendre sa place. -->
-      <div id="tr-v-avant" hidden></div>
+        <div class="tournoi__semaine" id="tr-v-avant" hidden></div>
+      </div>
       <div id="tr-v-rondes"></div>
       <p class="salon__note" id="tr-v-note" hidden></p>
       <p class="salon__note" id="tr-v-journal"></p>
@@ -3139,16 +3180,53 @@ function resteAvant(finA, maintenant){
    sur papergames.io. Celui qui n'a encore rien gagné y figure quand même,
    avec zéro : c'est d'avoir vu son propre nom dans la liste qui donne envie
    d'y remonter. */
+/* L'onglet qu'on regarde. Vide au départ : c'est le tableau le plus peuplé qui
+   s'ouvre, et il change tout seul tant que le joueur n'a rien touché. */
+var ongletChoisi = null;
+
 function dessinerLeClassementGeneral(){
-  var cl = (tousLesTournois && tousLesTournois.classement) || { lignes: [], moi: null, total: 0 };
-  var l = cl.lignes || [];
-  if (!l.length){
-    $("#tr-classement").innerHTML = '<p class="tournoi__vide">Le classement est encore vide. ' +
-      "Dis ton nom, entre dans un tournoi, et tu seras le premier nom dessus.</p>";
-    $("#tr-cl-titre").textContent = "Le classement de tout le monde";
+  var d = tousLesTournois || {};
+  var groupes = (d.classements || []).filter(function(g){ return g && g.total; });
+  var onglets = $("#tr-cl-onglets");
+
+  /* ⚠️ TANT QU'UNE SEULE DIFFICULTÉ A ÉTÉ JOUÉE, PAS D'ONGLETS : trois boutons
+     dont deux vides ne sont pas un choix, c'est un écran encombré. Ils
+     n'arrivent qu'au deuxième groupe rempli. */
+  if (groupes.length < 2){
+    if (onglets){ onglets.hidden = true; onglets.innerHTML = ""; }
+    dessinerUnClassement((d.classement) || { lignes: [], moi: null, total: 0 },
+                         "Le classement de tout le monde");
     return;
   }
-  $("#tr-cl-titre").textContent = "Le classement de tout le monde (" + cl.total +
+
+  var choisi = null;
+  for (var i = 0; i < groupes.length; i++) if (groupes[i].cle === ongletChoisi) choisi = groupes[i];
+  if (!choisi) choisi = groupes[0];          /* le plus peuplé, le serveur les a triés */
+
+  onglets.hidden = false;
+  onglets.innerHTML = groupes.map(function(g){
+    return '<button type="button" data-cle="' + g.cle + '"' +
+           (g === choisi ? ' class="actif"' : "") + ">" + echapper(g.libelle) + "</button>";
+  }).join("");
+  onglets.onclick = function(e){
+    var b = e.target.closest ? e.target.closest("button") : null;
+    if (!b) return;
+    ongletChoisi = b.getAttribute("data-cle");
+    dessinerLeClassementGeneral();
+  };
+
+  dessinerUnClassement(choisi, "Le classement en " + String(choisi.libelle).toLowerCase());
+}
+
+function dessinerUnClassement(cl, titre){
+  var l = (cl && cl.lignes) || [];
+  if (!l.length){
+    $("#tr-classement").innerHTML = '<p class="tournoi__vide">Ce classement est encore vide. ' +
+      "Dis ton nom, entre dans un tournoi, et tu seras le premier nom dessus.</p>";
+    $("#tr-cl-titre").textContent = titre;
+    return;
+  }
+  $("#tr-cl-titre").textContent = titre + " (" + cl.total +
     (cl.total > 1 ? " joueurs)" : " joueur)");
   $("#tr-classement").innerHTML = '<div class="tournoi__barre">' +
     l.map(ligneDeClassement).join("") +
