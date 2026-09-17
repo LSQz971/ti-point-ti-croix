@@ -51,6 +51,96 @@ h1{
   letter-spacing:.06em;text-transform:uppercase;color:var(--encre);
 }
 .soustitre{margin:0 0 8px;color:var(--encre-2);font-size:14px}
+
+/* ═══ LES ONGLETS DES TROIS JEUX ══════════════════════════════════════════
+   Pose le 17/09/2026 sur la question de Pierre : « plutot que de rajouter ces
+   38 px, est-ce possible que le nom du jeu soit l'onglet ? » La barre ne
+   s'ajoute donc jamais AU-DESSUS du titre : elle PREND SA PLACE. Le titre du
+   jeu ouvert EST l'onglet actif, et il garde son id, si bien que le domino
+   continue d'y ecrire la variante jouee sans qu'une ligne de code bouge.
+   Mesure du 17/09 : la ligne de titre coutait deja 18 a 25 px au domino,
+   36 px a Biten a Granmoun (imposes par le logo) et 53 px a Ti Point Ti
+   Croix, titre et sous-titre compris. */
+/* ═══ LE BOIS, LA LIBELLULE ET LE LISERE D'OR ═══════════════════════════════
+   Arrete par Pierre le 17/09/2026 : « la libellule sur le bois », et « un
+   liseret couleur or separe les onglets du reste de la page ».
+   LE VEINAGE EST IRREGULIER, et c'est tout le sujet. Les periodes sont
+   premieres entre elles (7, 11, 17, 29 px) et les angles se decalent d'un
+   degre, si bien que le motif ne revient plus a l'oeil ; des noeuds
+   elliptiques cassent ce qui resterait de trame. Le premier bois avait des
+   rayures qui revenaient tous les 7 px, et cela se voyait comme tel.
+   LE LISERE D'OR EST CONTINU : l'onglet ouvert s'arrete dessus et ne le coupe
+   pas, puisque c'est lui qui separe la barre du jeu. */
+.onglets{
+  position:relative;
+  display:flex;align-items:flex-end;gap:2px;flex:none;min-width:0;width:100%;
+  margin:0;padding:0;border-bottom:2px solid var(--or,#F0C64B);
+}
+.onglets>*{
+  position:relative;
+  flex:0 1 auto;min-width:0;margin:0;padding:6px 6px 6px;
+  font:inherit;font-size:clamp(10px,2.7vw,13px);font-weight:700;
+  letter-spacing:.015em;text-transform:none;text-align:center;line-height:1.25;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  border:0;border-radius:10px 10px 0 0;
+  transition:color .16s ease,box-shadow .16s ease;
+  background:
+    radial-gradient(38px 9px at 22% 60%, rgba(60,28,6,.26), transparent 70%),
+    radial-gradient(26px 7px at 74% 30%, rgba(60,28,6,.20), transparent 70%),
+    repeating-linear-gradient(91deg, rgba(48,22,4,.16) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(89deg, rgba(255,226,182,.07) 0 1px, transparent 1px 11px),
+    repeating-linear-gradient(92deg, rgba(40,18,3,.11) 0 2px, transparent 2px 17px),
+    repeating-linear-gradient(90deg, rgba(255,218,168,.05) 0 1px, transparent 1px 29px),
+    linear-gradient(161deg,#8A5229 0%,#6A3D1A 48%,#573114 100%);
+  color:#DDBF97;
+  box-shadow:inset 0 1px 0 rgba(255,232,196,.16),inset 0 3px 6px rgba(18,6,0,.30);
+  text-shadow:0 1px 0 rgba(20,8,0,.50);
+}
+/* chaque planche a son propre fil : trois fois la meme, cela se voit */
+.onglets>*:nth-child(2){background-position:9px 0,-13px 0,3px 0,-5px 0,7px 0,-11px 0,0 0}
+.onglets>*:nth-child(3){background-position:-17px 0,21px 0,-6px 0,9px 0,-4px 0,13px 0,0 0}
+/* L'ONGLET OUVERT : bois clair verni, reflet en biais, et LA LIBELLULE qui le
+   signe. C'est lui qui cede quand l'ecran se resserre : au domino il porte la
+   variante jouee, qui se relit dans les reglages, tandis que les deux autres
+   portent des NOMS DE JEU, et un nom de jeu se lit en entier. */
+.onglets__actif{
+  flex:1 1 auto;z-index:1;color:#FFF6E6;
+  background:
+    linear-gradient(104deg, rgba(255,255,255,0) 14%, rgba(255,246,226,.15) 36%, rgba(255,255,255,0) 58%),
+    radial-gradient(40px 10px at 28% 62%, rgba(90,44,10,.20), transparent 70%),
+    repeating-linear-gradient(91deg, rgba(48,22,4,.11) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(89deg, rgba(255,232,196,.09) 0 1px, transparent 1px 11px),
+    repeating-linear-gradient(92deg, rgba(40,18,3,.07) 0 2px, transparent 2px 17px),
+    linear-gradient(161deg,#C68F57 0%,#A86A36 42%,#8E5628 74%,#B87C42 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255,243,219,.55),
+    inset 0 -9px 13px rgba(24,8,0,.20),
+    4px 0 10px rgba(12,4,0,.30),-4px 0 10px rgba(12,4,0,.30);
+  text-shadow:0 1px 0 rgba(48,20,0,.50);
+}
+/* LA LIBELLULE. Le logo est deja dans la page, sous --logo-filigrane : on s'en
+   sert comme d'un pochoir, elle ne coute donc pas un octet de plus. */
+.onglets__actif::before{
+  content:"";flex:none;width:15px;height:15px;margin-right:3px;
+  background:#FFEFC9;
+  /* le filigrane porte une large marge transparente : on le grossit dans sa
+     boite pour que la libellule se lise, sans prendre un pixel de plus. */
+  -webkit-mask-size:132%;mask-size:132%;
+  -webkit-mask:var(--logo-filigrane) center/contain no-repeat;
+  mask:var(--logo-filigrane) center/contain no-repeat;
+}
+.onglets__lien{
+  flex:0 0 auto;font-size:clamp(9.5px,2.5vw,12px);
+  display:flex;align-items:center;justify-content:center;text-decoration:none;
+}
+.onglets__lien:hover,.onglets__lien:focus-visible{
+  color:#FFF0D8;
+  box-shadow:inset 0 2px 4px rgba(18,6,0,.34),inset 0 -2px 0 rgba(240,198,75,.50);
+}
+.onglets__lien:focus-visible{outline:2px solid rgba(240,198,75,.85);outline-offset:-3px}
+
+
+
 /* LA LIGNE « QUI JE SUIS ». Elle tient sur une ligne, elle passe à la ligne
    toute seule sur un téléphone, et elle ne pousse jamais la grille. */
 .moi{
@@ -525,7 +615,15 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
 <body>
 <div class="jeu">
 
-  <h1>Ti Point Ti Croix</h1>
+  <!-- ═══ LES ONGLETS DES TROIS JEUX ═══════════════════════════════════
+       Posé le 17/09/2026. Le titre EST l'onglet ouvert. Le bloc titre plus
+       sous-titre coûtait 53 px sur un téléphone : la barre en rend une
+       quinzaine à la grille. -->
+  <nav class="onglets" aria-label="Les jeux de L'SQz">
+    <h1 class="onglets__actif" aria-current="page">Ti Point Ti Croix</h1>
+    <a class="onglets__lien" data-jeu="domino" href="https://lsqz971.github.io/lsqz-domino/">Domino</a>
+    <a class="onglets__lien" data-jeu="biten-a-granmoun" href="https://lsqz971.github.io/biten-a-granmoun/">Biten a Granmoun</a>
+  </nav>
   <p class="soustitre">Le jeu traditionnel antillais</p>
 
   <!-- ═══ QUI JE SUIS, ET OÙ JE SUIS ═══════════════════════════════════
@@ -3990,6 +4088,51 @@ function demarrer(){
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", demarrer);
 else demarrer();
+/* ═══ LES ONGLETS ═════════════════════════════════════════════════════════
+   Deux choses, et rien d'autre.
+   (1) OUVERT DEPUIS LE DISQUE, on va chez le voisin sur le disque : les trois
+   jeux se verifient ensemble sans rien publier. En ligne, ce sont les adresses
+   publiques ecrites dans la page qui valent, et elles ne changent jamais.
+   (2) ON NE PERD PAS UNE PARTIE SANS L'AVOIR DIT : le plateau ne vit pas
+   dans la memoire du navigateur, il part avec la page. On demande donc,
+   et l'on ne demande QUE si une partie est vraiment en cours.
+
+   ⚠️ CE BLOC N'EST PAS UNE FONCTION ANONYME, ET C'EST VOLONTAIRE. Les tests
+   reperent la fermeture du jeu en cherchant la PREMIERE fermeture de fonction
+   anonyme appelee du fichier, pour y greffer leur point d'entree. Une seconde
+   fonction anonyme, posee juste avant, leur volait cette fermeture et toute la
+   suite tombait. Un nom et un appel : le motif n'existe plus, les tests
+   retrouvent leur fermeture. Pour la meme raison, on n'ecrit pas ce motif dans
+   ce commentaire : une simple phrase le portait, et il suffisait a les egarer
+   (constate le 17/09/2026). */
+function brancherLesOnglets(){
+  /* Les tests font tourner cette page sous node, avec un document de
+     remplacement qui ne porte que ce dont ils ont besoin : on sort plutot que
+     de les casser. */
+  if (typeof document === "undefined" || !document.querySelectorAll) return;
+  var SUR_LE_DISQUE = {
+    "domino":            "../DOMINO/domino.html",
+    "ti-point-ti-croix": "../TI_POINT_TI_CROIX/ti-point-ti-croix.html",
+    "biten-a-granmoun":  "../BITEN_A_GRANMOUN/biten-a-granmoun.html"
+  };
+  var liens = document.querySelectorAll(".onglets__lien");
+  for (var i = 0; i < liens.length; i++){
+    var voisin = SUR_LE_DISQUE[liens[i].getAttribute("data-jeu")];
+    /* HORS LIGNE = CHEZ LE VOISIN SUR LE DISQUE. On teste « pas en ligne »
+       plutot que « file: » : c'est deja la regle de lienDuJeu() dans le domino,
+       et elle couvre aussi l'apercu, qui sert la page autrement. */
+    var enLigne = (location.protocol === "http:" || location.protocol === "https:");
+    if (!enLigne && voisin) liens[i].setAttribute("href", voisin);
+    liens[i].addEventListener("click", function(e){
+      if (plateau && plateau.length && !fini &&
+          !confirm("Ta partie est en cours. Si tu passes à l'autre jeu, tu la recommences au retour. Tu y vas ?")){
+        e.preventDefault();
+      }
+    });
+  }
+}
+brancherLesOnglets();
+
 })();
 </script>
 </body></html>
