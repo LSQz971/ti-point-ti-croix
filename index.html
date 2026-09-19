@@ -762,11 +762,12 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
      Refait le 11/09/2026 sur ordre de Pierre, sur le modèle de
      papergames.io/fr/gomoku. Le menu « Mode » est supprimé : il n'y a plus
      des modes abstraits à choisir, il y a TROIS TOURNOIS qui portent un nom.
-     Et surtout, la page s'ouvre sur LE CLASSEMENT DE TOUT LE MONDE, DEPUIS
-     TOUJOURS : « qui clique sur tournoi, il voit les noms direct ». Un
-     classement où l'on reconnaît des prénoms donne envie d'y figurer, et
-     c'est ce qui fait circuler le jeu ; un écran vide ne donne envie de
-     rien. -->
+     Et surtout, la page s'ouvre sur DES NOMS : « qui clique sur tournoi, il
+     voit les noms direct ». Un classement où l'on reconnaît des prénoms donne
+     envie d'y figurer, et c'est ce qui fait circuler le jeu ; un écran vide ne
+     donne envie de rien.
+     ⚠️ CE SONT LES NOMS DE LA SEMAINE DEPUIS LE 19/09/2026, plus ceux de tous
+     les temps : voir l'écran 1 plus bas. -->
 <div class="salon" id="tournoi" hidden role="dialog" aria-modal="true" aria-label="Tournois">
   <div class="salon__boite tournoi__boite">
 
@@ -823,13 +824,25 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
 
       <div class="tournoi__cartes" id="tr-cartes"></div>
 
-      <h3 id="tr-cl-titre">Le classement de tout le monde</h3>
-      <!-- LES TROIS DIFFICULTÉS ONT CHACUNE LEUR CLASSEMENT (Pierre,
-           11/09/2026). Celui qui compte le plus de joueurs s'ouvre, les deux
-           autres attendent derrière leur onglet : on voit d'abord là où il se
-           passe quelque chose, sans perdre les deux autres. -->
-      <div class="tournoi__onglets" id="tr-cl-onglets" hidden></div>
-      <div id="tr-classement"></div>
+      <!-- ⚠️ L'ACCUEIL S'OUVRE SUR LA SEMAINE, PLUS SUR TOUS LES TEMPS
+           (Pierre, 19/09/2026). Le classement de tout le monde répétait les
+           noms et les chiffres que « la semaine dernière » disait déjà, à ceci
+           près qu'il les gardait pour toujours : celui qui arrive y lisait 481
+           parties jouées en face de 200 victoires, et comprenait qu'il ne
+           rattraperait personne. La semaine en cours repart de zéro tous les
+           vendredis, et la semaine d'avant prouve que quelqu'un a gagné : c'est
+           ce couple-là qui donne envie de jouer aujourd'hui.
+           C'est exactement le tableau de l'écran 2, remonté ici. -->
+      <div class="tournoi__semaines">
+        <div class="tournoi__semaine">
+          <h3 id="tr-cl-titre">Classement</h3>
+          <div id="tr-classement"></div>
+        </div>
+        <!-- LA SEMAINE D'AVANT, FIGÉE, À CÔTÉ. Sous 560 px il n'y a pas la
+             place de deux colonnes lisibles : elles s'empilent alors, celle
+             qui court toujours en premier. -->
+        <div class="tournoi__semaine" id="tr-cl-avant" hidden></div>
+      </div>
     </div>
 
     <!-- ══ ÉCRAN 2 : UN TOURNOI OUVERT ═══════════════════════════════════ -->
@@ -3067,7 +3080,7 @@ function quitterLeTournoi(){
       '<span class="tournoi__bilan"><b>' + vict + "</b> " +
       (vict > 1 ? "victoires" : "victoire") + " sur " + parts + " " +
       (parts > 1 ? "parties jouées" : "partie jouée") + "</span>" +
-      "<span>Ton nom reste au classement de tout le monde.</span>";
+      "<span>Ton nom reste au classement.</span>";
     $("#tr-v-partager").hidden = false;
     /* LE BOUTON DE SORTIE DIT OÙ IL MÈNE. « Revenir à ma JEU » ne disait pas
        qu'on sortait du tournoi, et l'on cherchait un autre bouton qui
@@ -3273,74 +3286,30 @@ function resteAvant(finA, maintenant){
   return "encore " + Math.max(1, Math.round(ms / 60000)) + " min";
 }
 
-/* ══ LE CLASSEMENT DE TOUT LE MONDE, DEPUIS TOUJOURS ═══════════════════
-   Rang, nom, et LE NOMBRE DE VICTOIRES en gros à droite, exactement comme
-   sur papergames.io. Celui qui n'a encore rien gagné y figure quand même,
-   avec zéro : c'est d'avoir vu son propre nom dans la liste qui donne envie
-   d'y remonter. */
-/* L'onglet qu'on regarde. Vide au départ : c'est le tableau le plus peuplé qui
-   s'ouvre, et il change tout seul tant que le joueur n'a rien touché. */
-var ongletChoisi = null;
-
+/* ══ LE CLASSEMENT DE LA SEMAINE, SUR L'ACCUEIL ════════════════════════
+   Remplace le classement de tout le monde le 19/09/2026, sur ordre de Pierre.
+   À gauche la semaine qui court, à droite celle qui vient de finir : le même
+   tableau que dans le Défi du vendredi, dessiné par les mêmes fonctions, pour
+   qu'on retrouve exactement ce qu'on avait sous les yeux en jouant.
+   Aucune requête de plus : /tournois rend déjà le Défi du vendredi en cours et
+   celui de la semaine d'avant, ils ne servaient simplement pas ici. */
 function dessinerLeClassementGeneral(){
   var d = tousLesTournois || {};
-  var groupes = (d.classements || []).filter(function(g){ return g && g.total; });
-  var onglets = $("#tr-cl-onglets");
+  var vue = d.vendredi || null;
 
-  /* ⚠️ TANT QU'UNE SEULE DIFFICULTÉ A ÉTÉ JOUÉE, PAS D'ONGLETS : trois boutons
-     dont deux vides ne sont pas un choix, c'est un écran encombré. Ils
-     n'arrivent qu'au deuxième groupe rempli. */
-  if (groupes.length < 2){
-    if (onglets){ onglets.hidden = true; onglets.innerHTML = ""; }
-    dessinerUnClassement((d.classement) || { lignes: [], moi: null, total: 0 },
-                         "Le classement de tout le monde");
-    return;
+  $("#tr-cl-titre").textContent = "Classement";
+  $("#tr-classement").innerHTML = htmlClassement(vue,
+    "Personne n'a encore joué cette semaine. Dis ton nom, entre dans le Défi " +
+    "du vendredi, et tu seras le premier nom dessus.");
+
+  /* LA SEMAINE D'AVANT SE MONTRE SI ELLE EXISTE, et se retire sans laisser de
+     trou le lundi d'une première semaine. */
+  var bloc = $("#tr-cl-avant");
+  if (bloc){
+    var html = htmlLaSemaineDavant();
+    bloc.innerHTML = html;
+    bloc.hidden = !html;
   }
-
-  var choisi = null;
-  for (var i = 0; i < groupes.length; i++) if (groupes[i].cle === ongletChoisi) choisi = groupes[i];
-  if (!choisi) choisi = groupes[0];          /* le plus peuplé, le serveur les a triés */
-
-  onglets.hidden = false;
-  onglets.innerHTML = groupes.map(function(g){
-    return '<button type="button" data-cle="' + g.cle + '"' +
-           (g === choisi ? ' class="actif"' : "") + ">" + echapper(g.libelle) + "</button>";
-  }).join("");
-  onglets.onclick = function(e){
-    var b = e.target.closest ? e.target.closest("button") : null;
-    if (!b) return;
-    ongletChoisi = b.getAttribute("data-cle");
-    dessinerLeClassementGeneral();
-  };
-
-  dessinerUnClassement(choisi, "Le classement en " + String(choisi.libelle).toLowerCase());
-}
-
-function dessinerUnClassement(cl, titre){
-  var l = (cl && cl.lignes) || [];
-  if (!l.length){
-    $("#tr-classement").innerHTML = '<p class="tournoi__vide">Ce classement est encore vide. ' +
-      "Dis ton nom, entre dans un tournoi, et tu seras le premier nom dessus.</p>";
-    $("#tr-cl-titre").textContent = titre;
-    return;
-  }
-  $("#tr-cl-titre").textContent = titre + " (" + cl.total +
-    (cl.total > 1 ? " joueurs)" : " joueur)");
-  $("#tr-classement").innerHTML = '<div class="tournoi__barre">' +
-    l.map(ligneDeClassement).join("") +
-    (cl.moi ? ligneDeClassement(cl.moi) : "") + "</div>";
-}
-
-function ligneDeClassement(x){
-  var sous = [];
-  sous.push(x.j + (x.j > 1 ? " parties jouées" : (x.j === 1 ? " partie jouée" : " partie jouée")));
-  if (x.n) sous.push(x.n + (x.n > 1 ? " nuls" : " nul"));
-  return '<div class="tournoi__rang' + (x.moi ? " tournoi__rang--moi" : "") +
-    (x.rappel ? " tournoi__rappel" : "") + '">' +
-    '<span class="tournoi__place">' + x.rang + "</span>" +
-    '<span class="tournoi__qui"><b>' + echapper(x.nom) + "</b><em>" + sous.join(" · ") + "</em></span>" +
-    '<span class="tournoi__score"><b>' + x.v + "</b><small>" +
-    (x.v > 1 ? "victoires" : "victoire") + "</small></span></div>";
 }
 
 /* ─────────────────────────────────────────────── entrer dans un tournoi ── */
@@ -3661,6 +3630,18 @@ function dessinerLaSemaineDavant(vue){
   var laSemaine = vue && vue.global && String(vue.code || "").charAt(0) === "v";
   if (!laSemaine || !cl.length){ bloc.hidden = true; bloc.innerHTML = ""; return; }
 
+  bloc.innerHTML = htmlLaSemaineDavant();
+  bloc.hidden = false;
+}
+
+/* LE MÊME TABLEAU, RENDU EN TEXTE, pour l'écran d'un tournoi comme pour
+   l'accueil (19/09/2026). Rend une chaîne vide s'il n'y a pas de semaine
+   d'avant : celui qui l'appelle sait alors qu'il n'a rien à montrer. */
+function htmlLaSemaineDavant(){
+  var v = (tousLesTournois || {}).vendrediAvant;
+  var cl = (v && v.classement) || [];
+  if (!cl.length) return "";
+
   var html = '<h3>La semaine dernière</h3><div class="tournoi__barre">';
   for (var i = 0; i < cl.length && i < 5; i++){
     var x = cl[i];
@@ -3674,17 +3655,20 @@ function dessinerLaSemaineDavant(vue){
   }
   html += "</div>";
   if (cl.length > 5) html += '<p class="salon__note">et ' + (cl.length - 5) + " autres.</p>";
-  bloc.innerHTML = html;
-  bloc.hidden = false;
+  return html;
 }
 
 function dessinerClassement(vue){
-  var cl = vue.classement || [];
-  if (!cl.length){
-    $("#tr-v-classement").innerHTML = '<p class="tournoi__vide">Personne n\'est encore entré. ' +
-      "Sois le premier nom du tableau.</p>";
-    return;
-  }
+  $("#tr-v-classement").innerHTML = htmlClassement(vue,
+    "Personne n'est encore entré. Sois le premier nom du tableau.");
+}
+
+/* LE TABLEAU D'UN TOURNOI, RENDU EN TEXTE. Il sert à deux endroits depuis le
+   19/09/2026 : l'écran d'un tournoi ouvert, et l'accueil, qui montre le Défi
+   du vendredi en cours. Une seule fonction, donc un seul tableau à corriger. */
+function htmlClassement(vue, vide){
+  var cl = (vue && vue.classement) || [];
+  if (!cl.length) return '<p class="tournoi__vide">' + vide + "</p>";
 
   /* CONTRE L'ORDINATEUR : LE NOMBRE DE VICTOIRES, EN GROS, comme sur
      papergames. Le tournoi s'appelle « celui qui gagne le plus », c'est donc
@@ -3706,8 +3690,7 @@ function dessinerClassement(vue){
         (x.g > 1 ? "victoires" : "victoire") + "</small></span>" +
         "</div>";
     }
-    $("#tr-v-classement").innerHTML = html + "</div>";
-    return;
+    return html + "</div>";
   }
 
   var html2 = '<table class="tournoi__table"><thead><tr>' +
@@ -3722,7 +3705,7 @@ function dessinerClassement(vue){
       "<td>" + y.j + "</td><td>" + y.g + "</td><td>" + y.n + "</td><td>" + y.p + "</td>" +
       "<td><b>" + y.pts + "</b></td></tr>";
   }
-  $("#tr-v-classement").innerHTML = html2 + "</tbody></table>";
+  return html2 + "</tbody></table>";
 }
 
 function dessinerLesRondes(vue){
