@@ -3489,7 +3489,28 @@ function dessinerLeClassementGeneral(){
    ═══════════════════════════════════════════════════════════════════════ */
 
 var TR_MINI_PARTIES = 1;      /* on entre dès la première partie */
-var TR_MINI_VICTOIRES = 5;    /* les coups se classent à partir de cinq victoires */
+
+/* ⚠️ LE SEUIL SE CALCULE, IL N'EST PAS ÉCRIT EN DUR (Pierre, 20/09/2026 :
+   « il faut que tout ça reste dynamique donc adaptable »). C'est la NBA qui
+   donne le principe : elle demande 82 paniers à 3 points sur une saison de 82
+   matchs, autrement dit un minimum CALÉ SUR LA TAILLE DE LA COMPÉTITION, pas
+   un nombre tombé du ciel. Un seuil fixe se périme des deux côtés à la fois :
+   cinq victoires n'écartaient personne à Ti Point Ti Croix, où l'on en compte
+   257, et retiraient deux joueurs sur cinq au domino, qui en est à 16.
+
+   LA RÈGLE : 5 % des victoires du meneur de CE tableau-là, jamais moins de
+   trois. Elle se recalcule à chaque affichage, séparément pour la semaine et
+   pour le général, et elle suit donc le jeu à mesure qu'il grandit.
+   Les deux réglages ci-dessous sont les seuls chiffres à toucher si le curseur
+   doit bouger un jour. */
+var TR_SEUIL_PART = 0.05;     /* la part des victoires du meneur */
+var TR_SEUIL_PLANCHER = 3;    /* et le plancher, quoi qu'il arrive */
+
+function seuilDesVictoires(lignes){
+  var max = 0;
+  for (var i = 0; i < lignes.length; i++) if ((lignes[i].v || 0) > max) max = lignes[i].v;
+  return Math.max(TR_SEUIL_PLANCHER, Math.round(max * TR_SEUIL_PART));
+}
 
 var TR_CL_CRITERES = [
   { cle: "victoires", titre: "Le plus de victoires",
@@ -3538,11 +3559,13 @@ function lignesDeToujours(){
    irait écrire dans les deux autres. */
 function classerPar(critere, lignes){
   var l = [], i, x;
+  /* LE SEUIL DE CE TABLEAU, calculé sur ses propres lignes. */
+  var seuil = seuilDesVictoires(lignes);
   for (i = 0; i < lignes.length; i++){
     x = lignes[i];
     if (critere === "victoires"){ if (x.v <= 0) continue; }
     else if (critere === "parties"){ if (x.j < TR_MINI_PARTIES || x.v <= 0) continue; }
-    else { if ((x.vCoups || 0) < TR_MINI_VICTOIRES || x.coups <= 0) continue; }
+    else { if ((x.vCoups || 0) < seuil || x.coups <= 0) continue; }
     l.push({ nom: x.nom, v: x.v, j: x.j, coups: x.coups, vCoups: x.vCoups || 0, moi: x.moi });
   }
   if (critere === "victoires"){
