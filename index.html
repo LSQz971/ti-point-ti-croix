@@ -3561,7 +3561,14 @@ function htmlUnClassement(critere, lignes, vide){
       sous = x.v + (x.v > 1 ? " victoires" : " victoire") + " sur " + x.j +
              (x.j > 1 ? " parties" : " partie");
     } else {
-      gros = String(Math.round(x.coups / x.v));
+      /* ⚠️ UNE DÉCIMALE, ET ELLE N'EST PAS DÉCORATIVE (constaté à l'écran le
+         20/09/2026, avant que Pierre ne le voie) : sur les chiffres réels de
+         la semaine, les trois premiers font 12,6, 13,2 et 13,4 coups par
+         victoire. Arrondis à l'entier, ils affichaient tous les trois « 13 »
+         dans trois rangs différents, et un tableau dont l'ordre contredit son
+         propre chiffre se lit comme un bug. La virgule est celle qu'on écrit
+         en français, pas le point. */
+      gros = (Math.round(x.coups * 10 / x.v) / 10).toFixed(1).replace(".", ",");
       petit = "coups par victoire";
       sous = x.v + (x.v > 1 ? " victoires" : " victoire") + " en " + x.coups + " coups";
     }
