@@ -3457,9 +3457,16 @@ function dessinerLeClassementGeneral(){
    être premier au rendement ou à la netteté de ses victoires, et il revient
    pour ça.
 
-     LE PLUS DE VICTOIRES     le compte brut, celui de l'accueil.
-     LE MEILLEUR RENDEMENT    gagner le plus en jouant le moins de parties.
-     LES VICTOIRES LES PLUS COURTES   gagner en posant le moins de points.
+     LE PLUS DE VICTOIRES              le compte brut, celui de l'accueil.
+     LE MOINS DE PARTIES POUR GAGNER   gagner le plus en jouant le moins.
+     LE MOINS DE COUPS POUR GAGNER     gagner en posant le moins de points.
+
+   ⚠️ LES TROIS TITRES SE LISENT EN PARALLÈLE, et chacun porte le mot qu'il
+   compte (Pierre, 20/09/2026 : « un autre terme avec le mot Parties dedans »,
+   « un autre terme avec le mot Coups dedans »). « Le meilleur rendement » et
+   « Les victoires les plus courtes » nommaient une qualité sans dire ce qui
+   se comptait : on devait lire la ligne du dessous pour savoir de quoi on
+   parlait.
 
    ⚠️ LES DEUX SEUILS NE SONT PAS DÉCORATIFS. Sans eux, celui qui joue UNE
    partie et la gagne affiche 100 % et prend la tête devant celui qui en a
@@ -3475,13 +3482,11 @@ var TR_CL_CRITERES = [
   { cle: "victoires", titre: "Le plus de victoires",
     quoi: "Toutes les parties gagnées, comptées une par une.",
     vide: "Le premier nom de ce tableau est encore à écrire." },
-  { cle: "parties", titre: "Le meilleur rendement",
-    quoi: "Gagner le plus en jouant le moins : la part de parties gagnées, à partir de "
-          + TR_MINI_PARTIES + " parties.",
+  { cle: "parties", titre: "Le moins de parties pour gagner",
+    quoi: "La part de parties gagnées, à partir de " + TR_MINI_PARTIES + " parties jouées.",
     vide: "Ce tableau s'ouvre à partir de " + TR_MINI_PARTIES + " parties jouées." },
-  { cle: "coups", titre: "Les victoires les plus courtes",
-    quoi: "Gagner en posant le moins de points : la moyenne de coups par victoire, à partir de "
-          + TR_MINI_VICTOIRES + " victoires.",
+  { cle: "coups", titre: "Le moins de coups pour gagner",
+    quoi: "La moyenne de coups par victoire, à partir de " + TR_MINI_VICTOIRES + " victoires.",
     vide: "Ce tableau s'ouvre à partir de " + TR_MINI_VICTOIRES + " victoires." }
 ];
 
