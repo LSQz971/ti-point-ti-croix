@@ -2740,8 +2740,64 @@ function reprendreMonTournoi(){
       if (!vue || vue.fini || vue.maPlace < 0){ marquerMonTournoi(null); return; }
       tournoi = { code: vue.code, vue: vue };
       direQuiJeSuis();
+      remettreLaPartieDansLeTournoi(vue);
     })
     .catch(function(){});
+}
+
+/* ═══ UN RECHARGEMENT NE FAIT PLUS PERDRE UNE VICTOIRE ════════════════════
+   Porté du domino le 20/09/2026, où Pierre l'avait fait corriger le
+   12/09/2026 au troisième signalement. Le même défaut vivait ici, intact, et
+   il s'est réveillé au premier rechargement de page : « je viens tout juste de
+   gagner et ça n'a pas compté ma victoire ».
+
+   reprendreMonTournoi() rendait le nom du défi, son bouton de sortie et le
+   compteur de victoires : l'écran disait donc « tu y es encore ». Mais il ne
+   rendait PAS `maPartieDeTournoi`, qui est une simple variable et ne survit à
+   aucun rechargement. Or c'est la seule chose que rapporterMaPartie() regarde
+   avant d'envoyer un résultat. La grille ouverte au démarrage par demarrer()
+   se jouait donc HORS tournoi pendant que tout l'écran affichait le tournoi,
+   et la victoire n'était comptée nulle part. `rejouer()` ne rattrapait le coup
+   qu'à la partie SUIVANTE : une victoire perdue, et une seule, à chaque fois
+   que la page repartait de zéro.
+
+   On remet donc la partie dans le défi tout de suite, et de deux façons :
+     • la grille est encore vierge (le cas normal : le serveur répond en
+       quelques dixièmes de seconde, bien avant le premier point) : on la rebat
+       proprement, au NIVEAU du tournoi, qui sans cela restait celui du menu ;
+     • un point est déjà posé : on ne casse pas la partie sous les doigts du
+       joueur. On ne l'arme QUE si le niveau affiché est déjà exactement celui
+       du tournoi ; sinon elle reste hors défi et la suivante repartira dedans.
+       Un classement faux serait pire qu'une partie non comptée. */
+function remettreLaPartieDansLeTournoi(vue){
+  if (!vue || vue.fini || !vue.maPartie) return;
+  if (maPartieDeTournoi) return;                  /* déjà armé, rien à reprendre */
+  if (enLigne()) return;                          /* il est à une table en ligne */
+  var boite = $("#tournoi");
+  if (boite && !boite.hidden) return;             /* la boîte est ouverte : il choisira */
+  var q = vue.maPartie;
+  if (q.reste !== null && q.reste !== undefined && q.reste <= 0) return;   /* quota fait */
+
+  if (!fini && grilleVierge()){ jouerMaPartie(vue); return; }
+
+  if ($("#difficulte").value !== q.niveau) return;
+  maPartieDeTournoi = { code: vue.code, niveau: q.niveau };
+  $("#difficulte").disabled = true;
+  if (!reglagesAvantLeTournoi){
+    reglagesAvantLeTournoi = { difficulte: q.niveau };
+  }
+  direQuiJeSuis();
+  dire("Te revoilà dans " + vue.nom + ". Cette partie compte.");
+}
+
+/* La grille n'a reçu aucun point, ni du joueur ni de l'ordinateur : on peut la
+   rebattre sans rien casser. */
+function grilleVierge(){
+  if (!plateau || !plateau.length) return true;
+  for (var r = 0; r < TAILLE; r++){
+    for (var c = 0; c < TAILLE; c++) if (plateau[r][c]) return false;
+  }
+  return true;
 }
 
 function trCode(){
