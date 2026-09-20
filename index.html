@@ -3468,26 +3468,39 @@ function dessinerLeClassementGeneral(){
    se comptait : on devait lire la ligne du dessous pour savoir de quoi on
    parlait.
 
-   ⚠️ LES DEUX SEUILS NE SONT PAS DÉCORATIFS. Sans eux, celui qui joue UNE
-   partie et la gagne affiche 100 % et prend la tête devant celui qui en a
-   gagné cinquante : un classement que la première partie venue renverse ne se
-   regarde pas deux fois. Cinq parties pour le rendement, trois victoires pour
-   les coups.
+   ⚠️ AUCUN SEUIL NE S'ÉCRIT, JAMAIS (Pierre, 20/09/2026 : « je ne veux pas
+   voir ça écrit »). Ce qui suit gouverne l'ordre des tableaux et ne paraît
+   nulle part à l'écran : celui qui n'y figure pas encore lit « le premier nom
+   de ce tableau est encore à écrire », pas une condition d'entrée.
+
+   ⚠️ ET LE SEUIL DES COUPS EST CELUI DE LA NBA (Pierre, 20/09/2026 : « ok pr
+   le seuil comme la NBA », après avoir fait poser le même calcul sur les
+   tireurs à 3 points). Le fait qui a tranché, relevé sur nba.com le jour
+   même, saison 2025-26 : sans minimum, le classement des tirs à 3 points par
+   réussite met QUATRE PIVOTS en tête, dont Jaxson Hayes avec 3 sur 3, devant
+   tous les tireurs de la ligue. La NBA exige donc 82 paniers à 3 points
+   réussis pour être classé au pourcentage, et 161 joueurs sur 516 y arrivent.
+   Cinq victoires jouent ici le même rôle : c'est le plus petit nombre qui
+   empêche un coup de chance unique de prendre la tête, et il se franchit en
+   une soirée.
+
+   LES PARTIES N'EN ONT PAS : on y entre dès la première, c'est la règle que
+   Pierre a posée le même jour et il n'est pas revenu dessus.
    ═══════════════════════════════════════════════════════════════════════ */
 
-var TR_MINI_PARTIES = 5;      /* rendement : sous cinq parties, un 100 % ne prouve rien */
-var TR_MINI_VICTOIRES = 3;    /* coups : une victoire courte isolée est un coup de chance */
+var TR_MINI_PARTIES = 1;      /* on entre dès la première partie */
+var TR_MINI_VICTOIRES = 5;    /* les coups se classent à partir de cinq victoires */
 
 var TR_CL_CRITERES = [
   { cle: "victoires", titre: "Le plus de victoires",
     quoi: "Toutes les parties gagnées, comptées une par une.",
     vide: "Le premier nom de ce tableau est encore à écrire." },
   { cle: "parties", titre: "Le moins de parties pour gagner",
-    quoi: "La part de parties gagnées, à partir de " + TR_MINI_PARTIES + " parties jouées.",
-    vide: "Ce tableau s'ouvre à partir de " + TR_MINI_PARTIES + " parties jouées." },
+    quoi: "La part de parties gagnées.",
+    vide: "Le premier nom de ce tableau est encore à écrire." },
   { cle: "coups", titre: "Le moins de coups pour gagner",
-    quoi: "La moyenne de coups par victoire, à partir de " + TR_MINI_VICTOIRES + " victoires.",
-    vide: "Ce tableau s'ouvre à partir de " + TR_MINI_VICTOIRES + " victoires." }
+    quoi: "La moyenne de coups par victoire.",
+    vide: "Le premier nom de ce tableau est encore à écrire." }
 ];
 
 /* LES DEUX SOURCES, RAMENÉES À LA MÊME FORME. Le tournoi dit `g` et le
@@ -3497,7 +3510,10 @@ function lignesDeLaSemaine(){
   var vue = (tousLesTournois || {}).vendredi, cl = (vue && vue.classement) || [], l = [];
   for (var i = 0; i < cl.length; i++){
     var x = cl[i];
-    l.push({ nom: x.nom, v: x.g || 0, j: x.j || 0, coups: x.coups || 0,
+    /* AU DÉFI DU VENDREDI, TOUTES LES VICTOIRES PORTENT LEURS COUPS : on y
+       joue seul contre l'ordinateur, et le tournoi les compte depuis le
+       11/09. `vCoups` y vaut donc le nombre de victoires. */
+    l.push({ nom: x.nom, v: x.g || 0, j: x.j || 0, coups: x.coups || 0, vCoups: x.g || 0,
              moi: !!(vue && x.place === vue.maPlace) });
   }
   return l;
@@ -3507,7 +3523,12 @@ function lignesDeToujours(){
   var c = (tousLesTournois || {}).classement, cl = (c && c.lignes) || [], l = [];
   for (var i = 0; i < cl.length; i++){
     var x = cl[i];
-    l.push({ nom: x.nom, v: x.v || 0, j: x.j || 0, coups: x.c || 0, moi: !!x.moi });
+    /* AU GÉNÉRAL, `cv` COMPTE LES SEULES VICTOIRES DONT ON CONNAÎT LES COUPS :
+       un match an fanmi se joue entre deux personnes sur une table, où le
+       serveur ne compte pas les coups. Diviser par toutes les victoires
+       ferait dire au tableau des moyennes qui n'ont jamais été jouées. */
+    l.push({ nom: x.nom, v: x.v || 0, j: x.j || 0, coups: x.c || 0, vCoups: x.cv || 0,
+             moi: !!x.moi });
   }
   return l;
 }
@@ -3521,8 +3542,8 @@ function classerPar(critere, lignes){
     x = lignes[i];
     if (critere === "victoires"){ if (x.v <= 0) continue; }
     else if (critere === "parties"){ if (x.j < TR_MINI_PARTIES || x.v <= 0) continue; }
-    else { if (x.v < TR_MINI_VICTOIRES || x.coups <= 0) continue; }
-    l.push({ nom: x.nom, v: x.v, j: x.j, coups: x.coups, moi: x.moi });
+    else { if ((x.vCoups || 0) < TR_MINI_VICTOIRES || x.coups <= 0) continue; }
+    l.push({ nom: x.nom, v: x.v, j: x.j, coups: x.coups, vCoups: x.vCoups || 0, moi: x.moi });
   }
   if (critere === "victoires"){
     l.sort(function(a, b){
@@ -3538,10 +3559,17 @@ function classerPar(critere, lignes){
       return a.nom.localeCompare(b.nom);
     });
   } else {
+    /* ⚠️ UNE MOYENNE DE COUPS, JAMAIS UN POURCENTAGE (Pierre, 20/09/2026 :
+       « pas en pourcentage ! NON ! en moyenne de nombre coups ! OUI ! »). Ce
+       que la NBA a apporté ici, c'est le SEUIL et le principe d'un chiffre
+       rapporté à un volume, pas sa forme : un joueur de morpion lit « 12,6
+       coups pour gagner » et sait ce que ça veut dire, là où « 7,9 % des
+       coups » ne lui dit rien. Le plus bas mène donc le tableau, et le titre
+       l'annonce en toutes lettres : le MOINS de coups pour gagner. */
     l.sort(function(a, b){
-      var A = a.coups / a.v, B = b.coups / b.v;
-      if (A !== B) return A - B;              /* le moins de coups par victoire passe devant */
-      if (b.v !== a.v) return b.v - a.v;
+      var A = a.coups / a.vCoups, B = b.coups / b.vCoups;
+      if (A !== B) return A - B;              /* le moins de coups par victoire devant */
+      if (b.vCoups !== a.vCoups) return b.vCoups - a.vCoups;
       return a.nom.localeCompare(b.nom);
     });
   }
@@ -3575,9 +3603,13 @@ function htmlUnClassement(critere, lignes, vide){
          dans trois rangs différents, et un tableau dont l'ordre contredit son
          propre chiffre se lit comme un bug. La virgule est celle qu'on écrit
          en français, pas le point. */
-      gros = (Math.round(x.coups * 10 / x.v) / 10).toFixed(1).replace(".", ",");
+      /* LE MÊME TRIO QUE LA NBA, dans nos unités à nous : les victoires, les
+         coups qu'elles ont coûtés, et la moyenne en gros. Une décimale, parce
+         que sans elle les trois premiers affichaient « 13 » dans trois rangs
+         différents, et la virgule française. */
+      gros = (Math.round(x.coups * 10 / x.vCoups) / 10).toFixed(1).replace(".", ",");
       petit = "coups par victoire";
-      sous = x.v + (x.v > 1 ? " victoires" : " victoire") + " en " + x.coups + " coups";
+      sous = x.vCoups + (x.vCoups > 1 ? " victoires" : " victoire") + " en " + x.coups + " coups";
     }
     html += '<div class="tournoi__rang' + (x.moi ? " tournoi__rang--moi" : "") + '">' +
       '<span class="tournoi__place">' + x.rang + "</span>" +
@@ -3599,18 +3631,21 @@ function dessinerLesClassements(){
   var semaine = lignesDeLaSemaine(), toujours = lignesDeToujours(), html = "";
   for (var i = 0; i < TR_CL_CRITERES.length; i++){
     var c = TR_CL_CRITERES[i];
-    /* ⚠️ LES COUPS DE TOUS LES TEMPS SE COMPTENT DEPUIS LE 20/09/2026 ET PAS
-       AVANT, et on le dit au lieu de laisser croire que le tableau porte
-       toute l'histoire du jeu. Les parties d'avant n'ont jamais gardé leur
-       nombre de coups : les rattraper demanderait de les inventer. */
-    var note = (c.cle === "coups")
-      ? '<p class="salon__note">Compté depuis le 20 septembre 2026.</p>' : "";
+    /* ⚠️ AUCUNE DATE SOUS « GÉNÉRAL », ET C'EST UNE CORRECTION (Pierre,
+       20/09/2026 : « pourquoi Compté depuis le 20 septembre 2026 ? pourquoi
+       pas depuis le début des tournois ? »). Il avait raison et j'avais
+       conclu trop vite : les tournois comptent les coups de chaque victoire
+       depuis leur naissance le 11/09/2026, et rien d'autre n'alimente ce
+       classement. Tout l'historique était donc là, il n'avait jamais été
+       recopié. La route /rattraper-coups du serveur le fait, une fois, en
+       rapprochant les joueurs par jeton. Le général porte maintenant tout ce
+       qui existe : il n'y a plus de date à écrire. */
     html += '<section class="tournoi__critere"><h3>' + c.titre + "</h3>" +
       '<p class="salon__note">' + c.quoi + "</p>" +
       '<div class="tournoi__semaines">' +
         '<div class="tournoi__semaine"><h4>Cette semaine</h4>' +
           htmlUnClassement(c.cle, semaine, c.vide) + "</div>" +
-        '<div class="tournoi__semaine"><h4>Général</h4>' + note +
+        '<div class="tournoi__semaine"><h4>Général</h4>' +
           htmlUnClassement(c.cle, toujours, c.vide) + "</div>" +
       "</div></section>";
   }
