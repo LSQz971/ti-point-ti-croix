@@ -422,6 +422,32 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
   background:rgba(255,214,102,.16);color:var(--encre);
   border-color:rgba(255,214,102,.5);
 }
+/* ═══ LE LIEN VERS LES SIX CLASSEMENTS, ET LEUR PANNEAU ═══════════════════
+   Posé le 20/09/2026. Le lien se touche au doigt sur toute la largeur : un mot
+   souligné au milieu d'un tableau se rate une fois sur deux sur un téléphone. */
+.tournoi__lien{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  width:100%;margin:0 0 12px;height:46px;padding:0 14px;
+  font:inherit;font-size:14px;font-weight:700;text-align:left;cursor:pointer;
+  color:var(--encre);background:rgba(4,38,18,.52);
+  border:1px solid rgba(255,214,102,.34);border-radius:11px;
+  letter-spacing:0;text-transform:none;box-shadow:none;
+}
+.tournoi__lien span{font-size:19px;opacity:.7}
+.tournoi__critere{margin:0 0 20px}
+.tournoi__critere h3{margin:0 0 2px}
+.tournoi__critere h4{margin:0 0 4px;font-size:13px;opacity:.8}
+.tournoi__critere .salon__note{margin:0 0 8px}
+/* LE PANNEAU ARRIVE DU CÔTÉ VERS LEQUEL ON VA : il glisse depuis la droite en
+   entrant dans les classements, depuis la gauche en revenant aux tournois.
+   Seul le panneau qui ARRIVE est animé, celui qui part se retire aussitôt :
+   faire cohabiter les deux le temps d'un fondu obligerait la boîte à prendre
+   la hauteur du plus grand des deux, et l'accueil se retrouverait avec un
+   trou de plusieurs écrans sous son dernier tableau. */
+@keyframes tr-glisse-gauche{ from{transform:translateX(26%);opacity:0} to{transform:none;opacity:1} }
+@keyframes tr-glisse-droite{ from{transform:translateX(-26%);opacity:0} to{transform:none;opacity:1} }
+.glisse--gauche{animation:tr-glisse-gauche .26s ease both}
+.glisse--droite{animation:tr-glisse-droite .26s ease both}
 .tournoi__rang{
   display:flex;align-items:center;gap:10px;padding:9px 4px;text-align:left;
   border-bottom:1px solid rgba(255,255,255,.07);
@@ -833,6 +859,15 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
            vendredis, et la semaine d'avant prouve que quelqu'un a gagné : c'est
            ce couple-là qui donne envie de jouer aujourd'hui.
            C'est exactement le tableau de l'écran 2, remonté ici. -->
+      <!-- ⚠️ LE LIEN VERS LES SIX CLASSEMENTS (Pierre, 20/09/2026). L'accueil
+           garde son tableau, celui de la semaine, qui est celui qu'on vient
+           lire tous les jours. Les six autres lectures du même jeu vivent une
+           porte plus loin, pour qui veut savoir qui gagne le plus vite et qui
+           gagne le plus souvent. -->
+      <button class="tournoi__lien" id="tr-cl-ouvrir" type="button">
+        Les classements <span aria-hidden="true">›</span>
+      </button>
+
       <div class="tournoi__semaines">
         <div class="tournoi__semaine">
           <h3 id="tr-cl-titre">Classement</h3>
@@ -843,6 +878,20 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
              qui court toujours en premier. -->
         <div class="tournoi__semaine" id="tr-cl-avant" hidden></div>
       </div>
+    </div>
+
+    <!-- ══ ÉCRAN 4 : LES SIX CLASSEMENTS ═════════════════════════════════
+         Posé le 20/09/2026 sur la commande de Pierre : trois façons de gagner,
+         et pour chacune la semaine qui court à côté de tout depuis
+         l'inscription. Le même jeu se lit six fois, et chaque lecture met
+         quelqu'un d'autre en tête : c'est ce qui fait revenir celui qui ne
+         sera jamais premier au nombre de victoires. -->
+    <div id="tr-classements" hidden>
+      <button class="tournoi__retour" id="tr-cl-retour" type="button"><span>‹</span> Revenir aux tournois</button>
+      <h2>Les classements</h2>
+      <p class="salon__note">Trois façons de gagner. Pour chacune, la semaine qui court
+        et tout depuis l'inscription.</p>
+      <div id="tr-cl-listes"></div>
     </div>
 
     <!-- ══ ÉCRAN 2 : UN TOURNOI OUVERT ═══════════════════════════════════ -->
@@ -3271,11 +3320,23 @@ function chargerLesTournois(silencieux){
        remplit le nom de son tournoi an fanmi doit pouvoir prendre son temps :
        il se faisait renvoyer à l'accueil au bout de six secondes. */
     if (ecran === "neuf") return;
+    /* ⚠️ NI CELUI QUI LIT LES SIX CLASSEMENTS : on lui redessine ses tableaux
+       avec les chiffres neufs, et on le laisse où il est. Le renvoyer à
+       l'accueil toutes les six secondes serait exactement le défaut qu'on
+       vient de corriger sur le défilement. */
+    if (ecran === "classements"){ dessinerLesClassements(); return; }
     montrerLAccueil();
   }).catch(function(){ if (!silencieux) dire("Le serveur ne répond pas."); });
 }
 
 function montrerLAccueil(){
+  /* ⚠️ ON NE REMONTE LA BOÎTE QU'EN ARRIVANT SUR L'ACCUEIL, JAMAIS AU RAPPEL
+     RÉGULIER (Pierre, 20/09/2026 : « cette page ne reste pas en bas ! »). Le
+     sondage rappelle /tournois toutes les six secondes et repasse par ici :
+     celui qui descendait lire le classement se faisait donc renvoyer en haut
+     six secondes plus tard, indéfiniment. C'est le même défaut que celui
+     corrigé sur l'écran d'un tournoi le 11/09/2026, resté ici intact. */
+  var change = (ecran !== "accueil") || $("#tr-accueil").hidden;
   tournoi = null;
   ecran = "accueil";
   majBoutonDuDefi();   /* plus de défi ouvert : le bouton redevient l'entrée */
@@ -3283,6 +3344,7 @@ function montrerLAccueil(){
   $("#tr-accueil").hidden = false;
   $("#tr-vivant").hidden = true;
   $("#tr-neuf").hidden = true;
+  $("#tr-classements").hidden = true;
   $("#tr-quitter").hidden = true;
   $("#tr-reprendre").hidden = true;
   /* ⚠️ SUR L'ACCUEIL DES TROIS TOURNOIS, CE BOUTON EST LA SEULE SORTIE : il
@@ -3293,7 +3355,7 @@ function montrerLAccueil(){
   $("#tr-fermer").textContent = "Fermer";
   dessinerLesCartes();
   dessinerLeClassementGeneral();
-  remonterLaBoite();
+  if (change) remonterLaBoite();
 }
 
 /* ⚠️ ON REMONTE LA BOÎTE EN HAUT À CHAQUE CHANGEMENT D'ÉCRAN. Elle défile,
@@ -3384,6 +3446,197 @@ function dessinerLeClassementGeneral(){
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   LES SIX CLASSEMENTS
+   Posés le 20/09/2026 sur la commande de Pierre. Le même jeu s'y lit de trois
+   façons, chacune sur deux durées : la semaine qui court, et tout depuis
+   l'inscription. Six tableaux, donc six têtes de classement possibles, et
+   c'est le but : celui qui ne sera jamais premier au nombre de victoires peut
+   être premier au rendement ou à la netteté de ses victoires, et il revient
+   pour ça.
+
+     LE PLUS DE VICTOIRES     le compte brut, celui de l'accueil.
+     LE MEILLEUR RENDEMENT    gagner le plus en jouant le moins de parties.
+     LES VICTOIRES LES PLUS COURTES   gagner en posant le moins de points.
+
+   ⚠️ LES DEUX SEUILS NE SONT PAS DÉCORATIFS. Sans eux, celui qui joue UNE
+   partie et la gagne affiche 100 % et prend la tête devant celui qui en a
+   gagné cinquante : un classement que la première partie venue renverse ne se
+   regarde pas deux fois. Cinq parties pour le rendement, trois victoires pour
+   les coups.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+var TR_MINI_PARTIES = 5;      /* rendement : sous cinq parties, un 100 % ne prouve rien */
+var TR_MINI_VICTOIRES = 3;    /* coups : une victoire courte isolée est un coup de chance */
+
+var TR_CL_CRITERES = [
+  { cle: "victoires", titre: "Le plus de victoires",
+    quoi: "Toutes les parties gagnées, comptées une par une.",
+    vide: "Le premier nom de ce tableau est encore à écrire." },
+  { cle: "parties", titre: "Le meilleur rendement",
+    quoi: "Gagner le plus en jouant le moins : la part de parties gagnées, à partir de "
+          + TR_MINI_PARTIES + " parties.",
+    vide: "Ce tableau s'ouvre à partir de " + TR_MINI_PARTIES + " parties jouées." },
+  { cle: "coups", titre: "Les victoires les plus courtes",
+    quoi: "Gagner en posant le moins de points : la moyenne de coups par victoire, à partir de "
+          + TR_MINI_VICTOIRES + " victoires.",
+    vide: "Ce tableau s'ouvre à partir de " + TR_MINI_VICTOIRES + " victoires." }
+];
+
+/* LES DEUX SOURCES, RAMENÉES À LA MÊME FORME. Le tournoi dit `g` et le
+   classement de tous les temps dit `v` ; ils parlent tous deux de victoires,
+   et les six tableaux n'ont pas à s'en soucier. */
+function lignesDeLaSemaine(){
+  var vue = (tousLesTournois || {}).vendredi, cl = (vue && vue.classement) || [], l = [];
+  for (var i = 0; i < cl.length; i++){
+    var x = cl[i];
+    l.push({ nom: x.nom, v: x.g || 0, j: x.j || 0, coups: x.coups || 0,
+             moi: !!(vue && x.place === vue.maPlace) });
+  }
+  return l;
+}
+
+function lignesDeToujours(){
+  var c = (tousLesTournois || {}).classement, cl = (c && c.lignes) || [], l = [];
+  for (var i = 0; i < cl.length; i++){
+    var x = cl[i];
+    l.push({ nom: x.nom, v: x.v || 0, j: x.j || 0, coups: x.c || 0, moi: !!x.moi });
+  }
+  return l;
+}
+
+/* L'ORDRE D'UN TABLEAU, ET SES DÉPARTAGES. On recopie chaque ligne retenue :
+   les trois tableaux partent des mêmes objets, et poser un rang dans l'un
+   irait écrire dans les deux autres. */
+function classerPar(critere, lignes){
+  var l = [], i, x;
+  for (i = 0; i < lignes.length; i++){
+    x = lignes[i];
+    if (critere === "victoires"){ if (x.v <= 0) continue; }
+    else if (critere === "parties"){ if (x.j < TR_MINI_PARTIES || x.v <= 0) continue; }
+    else { if (x.v < TR_MINI_VICTOIRES || x.coups <= 0) continue; }
+    l.push({ nom: x.nom, v: x.v, j: x.j, coups: x.coups, moi: x.moi });
+  }
+  if (critere === "victoires"){
+    l.sort(function(a, b){
+      if (b.v !== a.v) return b.v - a.v;
+      if (a.j !== b.j) return a.j - b.j;     /* à victoires égales, celui qui a joué le moins */
+      return a.nom.localeCompare(b.nom);
+    });
+  } else if (critere === "parties"){
+    l.sort(function(a, b){
+      var A = a.v / a.j, B = b.v / b.j;
+      if (B !== A) return B - A;
+      if (b.v !== a.v) return b.v - a.v;      /* à part égale, celui qui a gagné le plus */
+      return a.nom.localeCompare(b.nom);
+    });
+  } else {
+    l.sort(function(a, b){
+      var A = a.coups / a.v, B = b.coups / b.v;
+      if (A !== B) return A - B;              /* le moins de coups par victoire passe devant */
+      if (b.v !== a.v) return b.v - a.v;
+      return a.nom.localeCompare(b.nom);
+    });
+  }
+  for (i = 0; i < l.length; i++) l[i].rang = i + 1;
+  return l;
+}
+
+/* UN TABLEAU, RENDU COMME CEUX DE L'ACCUEIL : même barre, même gros chiffre à
+   droite, pour qu'on les lise sans rien réapprendre. Dix lignes au plus : au
+   delà, personne ne descend. */
+function htmlUnClassement(critere, lignes, vide){
+  var l = classerPar(critere, lignes);
+  if (!l.length) return '<p class="tournoi__vide">' + vide + "</p>";
+  var html = '<div class="tournoi__barre">';
+  for (var i = 0; i < l.length && i < 10; i++){
+    var x = l[i], gros, petit, sous;
+    if (critere === "victoires"){
+      gros = String(x.v);
+      petit = x.v > 1 ? "victoires" : "victoire";
+      sous = x.j + (x.j > 1 ? " parties jouées" : " partie jouée");
+    } else if (critere === "parties"){
+      gros = Math.round(x.v * 100 / x.j) + " %";
+      petit = "gagnées";
+      sous = x.v + (x.v > 1 ? " victoires" : " victoire") + " sur " + x.j +
+             (x.j > 1 ? " parties" : " partie");
+    } else {
+      gros = String(Math.round(x.coups / x.v));
+      petit = "coups par victoire";
+      sous = x.v + (x.v > 1 ? " victoires" : " victoire") + " en " + x.coups + " coups";
+    }
+    html += '<div class="tournoi__rang' + (x.moi ? " tournoi__rang--moi" : "") + '">' +
+      '<span class="tournoi__place">' + x.rang + "</span>" +
+      '<span class="tournoi__qui"><b>' + echapper(x.nom) + "</b><em>" + sous + "</em></span>" +
+      '<span class="tournoi__score"><b>' + gros + "</b><small>" + petit + "</small></span>" +
+      "</div>";
+  }
+  html += "</div>";
+  if (l.length > 10) html += '<p class="salon__note">et ' + (l.length - 10) + " autres.</p>";
+  return html;
+}
+
+/* LES SIX TABLEAUX, TROIS SECTIONS DE DEUX COLONNES. Sous 560 px les deux
+   colonnes s'empilent, la semaine qui court en premier : c'est celle qu'on
+   vient voir. */
+function dessinerLesClassements(){
+  var bac = $("#tr-cl-listes");
+  if (!bac) return;
+  var semaine = lignesDeLaSemaine(), toujours = lignesDeToujours(), html = "";
+  for (var i = 0; i < TR_CL_CRITERES.length; i++){
+    var c = TR_CL_CRITERES[i];
+    /* ⚠️ LES COUPS DE TOUS LES TEMPS SE COMPTENT DEPUIS LE 20/09/2026 ET PAS
+       AVANT, et on le dit au lieu de laisser croire que le tableau porte
+       toute l'histoire du jeu. Les parties d'avant n'ont jamais gardé leur
+       nombre de coups : les rattraper demanderait de les inventer. */
+    var note = (c.cle === "coups")
+      ? '<p class="salon__note">Compté depuis le 20 septembre 2026.</p>' : "";
+    html += '<section class="tournoi__critere"><h3>' + c.titre + "</h3>" +
+      '<p class="salon__note">' + c.quoi + "</p>" +
+      '<div class="tournoi__semaines">' +
+        '<div class="tournoi__semaine"><h4>Cette semaine</h4>' +
+          htmlUnClassement(c.cle, semaine, c.vide) + "</div>" +
+        '<div class="tournoi__semaine"><h4>Depuis l\'inscription</h4>' + note +
+          htmlUnClassement(c.cle, toujours, c.vide) + "</div>" +
+      "</div></section>";
+  }
+  bac.innerHTML = html;
+}
+
+/* ═══ ALLER AUX CLASSEMENTS, ET EN REVENIR ═══════════════════════════════
+   Le panneau arrive du côté vers lequel on va, comme une page qu'on tourne :
+   c'est ce qui dit qu'on se déplace DANS la boîte au lieu d'en ouvrir une
+   autre. */
+function montrerLesClassements(){
+  ecran = "classements";
+  $("#tr-accueil").hidden = true;
+  $("#tr-vivant").hidden = true;
+  $("#tr-neuf").hidden = true;
+  $("#tr-classements").hidden = false;
+  $("#tr-quitter").hidden = true;
+  $("#tr-reprendre").hidden = true;
+  $("#tr-fermer").hidden = false;
+  $("#tr-fermer").textContent = "Fermer";
+  dessinerLesClassements();
+  glisser($("#tr-classements"), "gauche");
+  remonterLaBoite();
+}
+
+function revenirDesClassements(){
+  montrerLAccueil();
+  glisser($("#tr-accueil"), "droite");
+}
+
+function glisser(bloc, sens){
+  if (!bloc) return;
+  bloc.classList.remove("glisse--gauche", "glisse--droite");
+  /* ON FORCE LE NAVIGATEUR À RELIRE LA POSITION avant de rejouer l'animation :
+     sans cette lecture, retirer puis remettre la classe dans le même souffle
+     ne rejoue rien du tout, et le panneau apparaît d'un coup. */
+  void bloc.offsetWidth;
+  bloc.classList.add(sens === "gauche" ? "glisse--gauche" : "glisse--droite");
+}
+
 /* ─────────────────────────────────────────────── entrer dans un tournoi ── */
 
 function ouvrirUneCarte(cle){
@@ -3393,6 +3646,7 @@ function ouvrirUneCarte(cle){
     ecran = "neuf";
     $("#tr-accueil").hidden = true;
     $("#tr-vivant").hidden = true;
+    $("#tr-classements").hidden = true;
     $("#tr-neuf").hidden = false;
     $("#tr-quitter").hidden = true;
     remonterLaBoite();
@@ -3484,6 +3738,7 @@ function afficherTournoi(vue){
   if (change) remonterLaBoite();
   $("#tr-accueil").hidden = true;
   $("#tr-neuf").hidden = true;
+  $("#tr-classements").hidden = true;
   $("#tr-vivant").hidden = false;
   $("#tr-quitter").hidden = false;
   $("#tr-reprendre").hidden = true;
@@ -3973,6 +4228,8 @@ function brancherLesTournois(){
       if (tournoi && tournoi.vue) ouvrirTournoi();
     });
   }
+  $("#tr-cl-ouvrir").addEventListener("click", montrerLesClassements);
+  $("#tr-cl-retour").addEventListener("click", revenirDesClassements);
   $("#tournoi-ouvrir").addEventListener("click", function(){
     if (tournoi && tournoi.vue) quitterLeTournoi(); else ouvrirTournoi();
   });
