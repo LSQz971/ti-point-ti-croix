@@ -882,15 +882,17 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
 
     <!-- ══ ÉCRAN 4 : LES SIX CLASSEMENTS ═════════════════════════════════
          Posé le 20/09/2026 sur la commande de Pierre : trois façons de gagner,
-         et pour chacune la semaine qui court à côté de tout depuis
-         l'inscription. Le même jeu se lit six fois, et chaque lecture met
+         et pour chacune la semaine qui court à côté du général. ⚠️ LA COLONNE
+         DE DROITE S'APPELLE « GÉNÉRAL », et pas « depuis l'inscription » :
+         tranché par Pierre le jour même, en deux mots. Le même jeu se lit
+         six fois, et chaque lecture met
          quelqu'un d'autre en tête : c'est ce qui fait revenir celui qui ne
          sera jamais premier au nombre de victoires. -->
     <div id="tr-classements" hidden>
       <button class="tournoi__retour" id="tr-cl-retour" type="button"><span>‹</span> Revenir aux tournois</button>
       <h2>Les classements</h2>
       <p class="salon__note">Trois façons de gagner. Pour chacune, la semaine qui court
-        et tout depuis l'inscription.</p>
+        et le général.</p>
       <div id="tr-cl-listes"></div>
     </div>
 
@@ -3449,8 +3451,8 @@ function dessinerLeClassementGeneral(){
 /* ═══════════════════════════════════════════════════════════════════════
    LES SIX CLASSEMENTS
    Posés le 20/09/2026 sur la commande de Pierre. Le même jeu s'y lit de trois
-   façons, chacune sur deux durées : la semaine qui court, et tout depuis
-   l'inscription. Six tableaux, donc six têtes de classement possibles, et
+   façons, chacune sur deux durées : la semaine qui court, et le général.
+   Six tableaux, donc six têtes de classement possibles, et
    c'est le but : celui qui ne sera jamais premier au nombre de victoires peut
    être premier au rendement ou à la netteté de ses victoires, et il revient
    pour ça.
@@ -3603,7 +3605,7 @@ function dessinerLesClassements(){
       '<div class="tournoi__semaines">' +
         '<div class="tournoi__semaine"><h4>Cette semaine</h4>' +
           htmlUnClassement(c.cle, semaine, c.vide) + "</div>" +
-        '<div class="tournoi__semaine"><h4>Depuis l\'inscription</h4>' + note +
+        '<div class="tournoi__semaine"><h4>Général</h4>' + note +
           htmlUnClassement(c.cle, toujours, c.vide) + "</div>" +
       "</div></section>";
   }
