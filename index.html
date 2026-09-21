@@ -947,6 +947,16 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
            même regard où l'on en est et qui il faut rattraper. Sous 560 px il
            n'y a pas la place de deux colonnes lisibles, elles s'empilent
            alors, celle qui court toujours en premier. -->
+      <!-- ⚠️ LE LIEN VERS LES CLASSEMENTS EST AUSSI ICI (Pierre, 21/09/2026 :
+           « je souhaite voir le lien vers Les classements sur ce panneau »).
+           Il n'existait que sur l'accueil. Or c'est en sortant d'un tournoi
+           qu'on vient de lire son rang, et c'est LA qu'on a envie d'aller
+           voir les autres tableaux : obliger a revenir aux trois cartes
+           d'abord, c'est perdre le seul moment ou la question se pose. -->
+      <button class="tournoi__lien" id="tr-cl-ouvrir2" type="button">
+        Les classements <span aria-hidden="true">&rsaquo;</span>
+      </button>
+
       <div class="tournoi__semaines">
         <div class="tournoi__semaine">
           <h3>Classement</h3>
@@ -3679,7 +3689,38 @@ function dessinerLesClassements(){
    Le panneau arrive du côté vers lequel on va, comme une page qu'on tourne :
    c'est ce qui dit qu'on se déplace DANS la boîte au lieu d'en ouvrir une
    autre. */
+/* ⚠️ D'OU L'ON VIENT, POUR Y RETOURNER (Pierre, 21/09/2026). Le lien des
+   classements s'ouvre maintenant depuis DEUX endroits : l'accueil et l'ecran
+   d'un tournoi. « Revenir aux tournois » ramenait toujours a l'accueil : en
+   ouvrant les classements depuis l'ecran de sortie d'un tournoi, on perdait
+   son bilan et son bouton de partage, et il n'y avait aucun moyen d'y
+   revenir. On retient donc l'etat EXACT des boutons de l'ecran quitte, et on
+   le repose tel quel au retour : rien n'est recalcule, donc rien ne peut
+   contredire ce qu'il avait sous les yeux. */
+var retourDesClassements = null;
+
+function etatDesBoutons(){
+  var e = {};
+  ["tr-quitter", "tr-reprendre", "tr-fermer", "tr-retour"].forEach(function(id){
+    var b = document.getElementById(id);
+    if (b) e[id] = { cache: b.hidden, texte: b.textContent };
+  });
+  return e;
+}
+
+function reposerLesBoutons(e){
+  if (!e) return;
+  Object.keys(e).forEach(function(id){
+    var b = document.getElementById(id);
+    if (!b) return;
+    b.hidden = e[id].cache;
+    b.textContent = e[id].texte;
+  });
+}
+
 function montrerLesClassements(){
+  /* on ne retient que si l'on vient de l'ecran d'un tournoi */
+  retourDesClassements = $("#tr-vivant").hidden ? null : etatDesBoutons();
   ecran = "classements";
   $("#tr-accueil").hidden = true;
   $("#tr-vivant").hidden = true;
@@ -3695,6 +3736,19 @@ function montrerLesClassements(){
 }
 
 function revenirDesClassements(){
+  if (retourDesClassements){
+    var etat = retourDesClassements;
+    retourDesClassements = null;
+    ecran = "tournoi";
+    $("#tr-accueil").hidden = true;
+    $("#tr-neuf").hidden = true;
+    $("#tr-classements").hidden = true;
+    $("#tr-vivant").hidden = false;
+    reposerLesBoutons(etat);
+    glisser($("#tr-vivant"), "droite");
+    remonterLaBoite();
+    return;
+  }
   montrerLAccueil();
   glisser($("#tr-accueil"), "droite");
 }
@@ -4301,6 +4355,7 @@ function brancherLesTournois(){
     });
   }
   $("#tr-cl-ouvrir").addEventListener("click", montrerLesClassements);
+  $("#tr-cl-ouvrir2").addEventListener("click", montrerLesClassements);
   $("#tr-cl-retour").addEventListener("click", revenirDesClassements);
   $("#tournoi-ouvrir").addEventListener("click", function(){
     if (tournoi && tournoi.vue) quitterLeTournoi(); else ouvrirTournoi();
