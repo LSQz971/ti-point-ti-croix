@@ -2908,7 +2908,13 @@ function monNom(){
 function poserMonNom(n){
   var propre = String(n || "").trim().slice(0, 18);
   if (!propre) return "";
-  try { localStorage.setItem("tptc-nom", propre); } catch (e) {}
+  try {
+    localStorage.setItem("tptc-nom", propre);
+    /* LE NOM SUIT D'UN JEU A L'AUTRE : lsqz-nom est la seule cle partagee par
+       Ti Point Ti Croix et le domino. Elle ne sert QU'A PRE-REMPLIR le champ,
+       jamais a valider une identite : les classements restent etanches. */
+    localStorage.setItem("lsqz-nom", propre);
+  } catch (e) {}
   if ($("#tr-nom")) $("#tr-nom").value = propre;
   if ($("#salon-nom")) $("#salon-nom").value = propre;
   direQuiJeSuis();
@@ -2981,7 +2987,10 @@ function nomDejaPris(d){
   var boite = $("#tr-code-boite");
   if (boite && d && d.besoinCode){ boite.hidden = false; $("#tr-code").focus(); }
   if ($("#tr-nom-note")) $("#tr-nom-note").textContent = (d && d.erreur) || "Ce nom est déjà pris.";
-  try { localStorage.removeItem("tptc-nom"); } catch (e) {}
+  try {
+    localStorage.removeItem("tptc-nom");
+    localStorage.removeItem("lsqz-nom");
+  } catch (e) {}
   direQuiJeSuis();
 }
 
@@ -3093,7 +3102,7 @@ function ouvrirTournoi(){
   $("#tournoi").hidden = false;
   remonterLaBoite();
   try {
-    var garde = localStorage.getItem("tptc-nom");
+    var garde = localStorage.getItem("tptc-nom") || localStorage.getItem("lsqz-nom");
     if (garde && !$("#tr-nom").value) $("#tr-nom").value = garde;
   } catch (e) {}
   chargerLesTournois();
@@ -4492,7 +4501,7 @@ function demarrer(){
     } else { try { document.execCommand("copy"); fait(); } catch (e) {} }
   });
   try {
-    var nomGarde = localStorage.getItem("tptc-nom");
+    var nomGarde = localStorage.getItem("tptc-nom") || localStorage.getItem("lsqz-nom");
     if (nomGarde) $("#salon-nom").value = nomGarde;
   } catch (e) {}
 
