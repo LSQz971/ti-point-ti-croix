@@ -2985,7 +2985,18 @@ function rappelerMonCode(){
    le nom en mémoire, sinon la page afficherait un nom que le serveur refuse. */
 function nomDejaPris(d){
   var boite = $("#tr-code-boite");
-  if (boite && d && d.besoinCode){ boite.hidden = false; $("#tr-code").focus(); }
+  if (boite && d && d.besoinCode){
+    boite.hidden = false;
+    /* LE CHAMP S'OUVRAIT VIDE alors que le code est deja en memoire : le joueur
+       retapait ce que son navigateur possedait deja. On le pre-remplit, il n'a
+       plus qu'a valider. S'il est vide, rien ne change et le curseur attend. */
+    var champ = $("#tr-code");
+    if (champ && !champ.value){
+      var garde = monCode();
+      if (garde) champ.value = garde;
+    }
+    if (champ) champ.select ? (champ.focus(), champ.select()) : champ.focus();
+  }
   if ($("#tr-nom-note")) $("#tr-nom-note").textContent = (d && d.erreur) || "Ce nom est déjà pris.";
   try {
     localStorage.removeItem("tptc-nom");
