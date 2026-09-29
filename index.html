@@ -138,6 +138,38 @@ h1{
   box-shadow:inset 0 2px 4px rgba(18,6,0,.34),inset 0 -2px 0 rgba(240,198,75,.50);
 }
 .onglets__lien:focus-visible{outline:2px solid rgba(240,198,75,.85);outline-offset:-3px}
+/* ═══ « INSCRIPTION », LA PORTE QUI NE DEMANDE PAS DE JOUER ════════════════
+   Posee le 29/09/2026 sur l'ordre de Pierre : « rajouter un bouton
+   Inscription a ce niveau la pour tous les jeux [...] tu n'as pas besoin de
+   jouer pour t'inscrire, tu peux t'inscrire directement ».
+   JUSQU'A CE JOUR LE FORMULAIRE NE S'OUVRAIT QU'APRES COUP : au retour d'une
+   partie, a la fin d'un tournoi, ou apres une enigme trouvee. Qui arrivait
+   sur la page et repartait sans jouer n'avait aucune porte, et c'est pourtant
+   celui-la que la chaine WhatsApp amene. Le bouton ouvre le formulaire
+   partage par les trois jeux, « Les ateliers de L'SQz » (Tally 1AQxXb).
+   IL N'EST PAS UN ONGLET ET NE DOIT PAS EN AVOIR L'AIR : un onglet mene a un
+   jeu, celui-ci declenche une action. D'ou l'or plein sur le bois, le plus
+   fort contraste de la barre, et le seul endroit ou l'oeil se pose sans
+   chercher. Il ne cede jamais (flex:0 0 auto) : un bouton que l'ecran
+   rogne est un bouton qui n'existe pas. */
+.onglets__inscription{
+  flex:0 0 auto;margin-left:auto;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:clamp(9.5px,2.5vw,12px);
+  background:linear-gradient(168deg,#F9DE86 0%,#EFC44A 46%,#D8A527 100%);
+  color:#3A2504;
+  box-shadow:inset 0 1px 0 rgba(255,251,230,.85),inset 0 -4px 7px rgba(122,79,6,.26);
+  text-shadow:0 1px 0 rgba(255,247,216,.50);
+}
+.onglets__inscription:hover,.onglets__inscription:focus-visible{
+  background:linear-gradient(168deg,#FFECA4 0%,#F7D160 46%,#E4B434 100%);
+  color:#2B1A02;
+}
+.onglets__inscription:focus-visible{outline:2px solid rgba(255,255,255,.92);outline-offset:-3px}
+/* `display:flex` ci-dessus l'emporterait sur le `display:none` que le
+   navigateur attache a [hidden] : sans cette ligne, un bouton cache resterait
+   visible. */
+.onglets__inscription[hidden]{display:none}
 
 
 
@@ -649,6 +681,7 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
     <h1 class="onglets__actif" aria-current="page">Ti Point Ti Croix</h1>
     <a class="onglets__lien" data-jeu="domino" href="https://lsqz971.github.io/lsqz-domino/">Domino</a>
     <a class="onglets__lien" data-jeu="biten-a-granmoun" href="https://lsqz971.github.io/biten-a-granmoun/">Biten a Granmoun</a>
+    <button class="onglets__inscription" id="onglet-inscription" type="button">Inscription</button>
   </nav>
   <p class="soustitre">Le jeu traditionnel antillais</p>
 
@@ -4589,6 +4622,26 @@ function brancherLesOnglets(){
       }
     });
   }
+  brancherLInscription();
+}
+
+/* ─────────────────────────────────────── « Inscription », la porte directe ──
+   Ordre de Pierre du 29/09/2026 : « tu n'as pas besoin de jouer pour
+   t'inscrire, tu peux t'inscrire directement ». Jusque-là le formulaire ne
+   s'ouvrait qu'APRÈS une partie ou à la fin d'un tournoi : qui arrivait sur la
+   page et repartait sans jouer n'avait aucune porte.
+   ⚠️ CE BOUTON N'EST PAS UN LIEN : il ne quitte pas la page, il ouvre le
+   formulaire PAR-DESSUS la grille. On ne demande donc aucune confirmation, la
+   partie en cours reste derrière le voile et se retrouve intacte, contrairement
+   aux onglets voisins qui, eux, changent de page.
+   ⚠️ ET IL NE REGARDE PAS `etat.forme`. Ce repère sert à ne plus rien demander
+   DE SOI-MÊME à qui a déjà répondu ; il n'a pas à fermer une porte que la
+   personne pousse elle-même. Qui touche « Inscription » veut le formulaire. */
+function brancherLInscription(){
+  var bouton = document.getElementById("onglet-inscription");
+  if (!bouton) return;
+  if (!TALLY){ bouton.hidden = true; return; }
+  bouton.addEventListener("click", function(){ ouvrirFormulaire("inscription"); });
 }
 brancherLesOnglets();
 
