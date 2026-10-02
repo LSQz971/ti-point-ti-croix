@@ -4,6 +4,11 @@
 <title>Ti Point Ti Croix — L'SQz</title>
 <meta name="description" content="Le jeu traditionnel antillais. Aligner cinq points avant l'ordinateur.">
 <meta name="theme-color" content="#0A3B1D">
+<!-- L'habillage dort jusqu'a son heure, mais son image se charge d'avance :
+     mesure en ligne, elle ne l'etait pas tant que la bande restait cachee, donc
+     elle aurait ete peinte PENDANT la seconde qui compte. Le `media` reprend le
+     seuil du jeu : un telephone ne precharge rien. -->
+<link rel="prefetch" as="image" href="fond-jeux.jpg" media="(min-width:1000px) and (min-height:620px) and (pointer:fine)">
 <style>
 /* ═══════════════════════════════════════════════════════════════════════
    TI POINT TI CROIX — L'SQz
