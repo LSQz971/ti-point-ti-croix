@@ -668,6 +668,74 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
 .cadre{
   flex:1;width:100%;min-height:340px;border:0;border-radius:12px;background:#EDE8DC;
 }
+
+/* ═══════════════════════════ L'HABILLAGE L'SQz DES JOUEURS ════════════════
+   Arrêté par Pierre le 01/10/2026, en quatre temps : « les flyers de chaque
+   côté », le modèle trashtalk.co, « que l'affiche prenne toute la longueur
+   sans déformation même si on ne voit pas le tout de chaque côté », « l'image
+   est trop présente en terme de couleur, met en filigrane », et enfin
+   « tu utilises Fond jeux.png pour les 2 côtés pleine longueur ».
+
+   Chaque côté est donc une BANDE PLEINE HAUTEUR, d'un bord à l'autre de la
+   gouttière, remplie par `Fond jeux.png` en `cover` : l'image garde ses
+   proportions exactes et c'est la largeur qui se recadre. LA MÊME IMAGE DES
+   DEUX CÔTÉS, c'est elle qui porte les trois affiches.
+
+   ⚠️ LE JEU N'EST PAS TOUCHÉ : il garde son fond d'origine, et le filigrane
+   le laisse traverser l'image, qui en prend la teinte.
+
+   ⚠️ ORDINATEUR SEULEMENT, SEUIL MESURÉ : la grille prend min(96vw,700px), donc dès 1000 px la bande fait 150 px,
+   et 400 px sur un écran de 1500 px.
+   Le `pointer:fine` écarte la tablette en paysage, qui dépasse la largeur mais
+   se touche au doigt ; le `min-height` écarte le portable couché.
+
+   ⚠️ L'IMAGE EST DÉCLARÉE DANS LA MEDIA QUERY. Une règle qui ne s'applique pas
+   ne télécharge pas sa ressource : un téléphone ne paie donc pas un octet des
+   293 Ko de l'habillage. */
+.flyers{display:none}
+
+@media (min-width:1000px) and (min-height:620px) and (pointer:fine){
+  /* ⚠️ PAS DE `display` ICI : la bande attend son heure. C'est
+     `ouvrirLHabillage()` qui pose `.flyers--ouvert` à l'instant dit, et
+     c'est la seule façon d'être à la seconde : la propagation de GitHub
+     Pages, elle, prend une à deux minutes et ne se pilote pas. */
+  .flyers{
+    position:fixed;top:0;bottom:0;z-index:5;
+    cursor:pointer;
+  }
+  /* ⚠️ PAS DE `width` EN `100vw` : cette unité INCLUT la barre de défilement,
+     alors que le bloc conteneur d'un `position:fixed` l'exclut. Mesuré le
+     01/10/2026 sur BITEN, qui défile : les deux bandes mordaient de 7 px sur
+     la page. On borne donc par `left` et `right`, qui suivent le viewport réel. */
+  .flyers--ouvert{display:block}
+  .flyers--gauche{left:0;right:calc(50% + 350px)}
+  .flyers--droite{right:0;left:calc(50% + 350px)}
+  /* TOUTE LA BANDE SE CLIQUE, pas seulement l'image : c'est la convention
+     d'un habillage, on ne vise pas une vignette. */
+  .flyer{
+    width:100%;height:100%;padding:0;border:0;background:none;cursor:pointer;
+    display:block;position:relative;font:inherit;color:var(--or);
+  }
+  .flyer__image{
+    position:absolute;inset:0;
+    background-image:url("fond-jeux.jpg");
+    background-size:cover;background-repeat:no-repeat;background-position:center;
+    /* EN FILIGRANE : on baisse l'opacité et on casse la saturation, le fond du
+       jeu traverse l'image et elle en prend la teinte. Au survol elle se
+       révèle, ce qui dit au passage qu'elle est vivante. */
+    opacity:.30;filter:saturate(.45);
+    transition:opacity .35s ease, filter .35s ease, transform .35s ease;
+  }
+  .flyer:hover .flyer__image{opacity:.62;filter:saturate(.85);transform:scale(1.02)}
+  .flyer__appel{
+    position:absolute;left:0;right:0;bottom:18px;padding:0 8px;
+    font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+    text-align:center;color:var(--or);opacity:.8;transition:opacity .35s ease;
+  }
+  .flyer:hover .flyer__appel{opacity:1}
+  .flyer:focus-visible{outline:2px solid var(--or);outline-offset:-3px}
+}
+
 </style></head>
 
 <body>
@@ -1088,6 +1156,32 @@ svg.grille{display:block;width:100%;height:auto;position:relative;touch-action:m
     <button class="bouton--pale" id="salon-fermer" type="button">Revenir à ma partie</button>
   </div>
 </div>
+
+
+<!-- ═══ L'HABILLAGE, DE CHAQUE CÔTÉ ═══════════════════════════════════════
+     Ordre de Pierre du 01/10/2026 : « tu utilises Fond jeux.png pour les 2
+     côtés pleine longueur ». La même image des deux côtés, c'est elle qui
+     porte les trois affiches.
+     Elle ne mène PAS à la boutique : les trois boutiques HelloAsso sont en
+     privé, et c'est exactement ce qui rend vraie la phrase « il n'y a que les
+     inscrits qui reçoivent ce lien ». Cette page-ci est publique. La bande
+     ouvre donc le formulaire d'inscription aux jeux, par-dessus la page.
+     Le champ caché `resultat` reçoit `habillage` : on saura dans Tally qui
+     vient de l'habillage et qui vient du bouton. -->
+<aside class="flyers flyers--gauche">
+  <button class="flyer" id="habillage-gauche" type="button"
+          aria-label="L'SQz des joueurs : s'inscrire aux jeux">
+    <span class="flyer__image"></span>
+    <span class="flyer__appel">Je m'inscris</span>
+  </button>
+</aside>
+<aside class="flyers flyers--droite">
+  <button class="flyer" id="habillage-droite" type="button"
+          aria-label="L'SQz des joueurs : s'inscrire aux jeux">
+    <span class="flyer__image"></span>
+    <span class="flyer__appel">Je m'inscris</span>
+  </button>
+</aside>
 
 <div class="voile" id="voile" hidden role="dialog" aria-modal="true" aria-label="L'SQz">
   <div class="voile__boite">
@@ -4623,6 +4717,8 @@ function brancherLesOnglets(){
     });
   }
   brancherLInscription();
+  brancherLesFlyers();
+  ouvrirLHabillage();
 }
 
 /* ─────────────────────────────────────── « Inscription », la porte directe ──
@@ -4643,6 +4739,47 @@ function brancherLInscription(){
   if (!TALLY){ bouton.hidden = true; return; }
   bouton.addEventListener("click", function(){ ouvrirFormulaire("inscription"); });
 }
+/* ───────────────────────────────── LES DEUX FLYERS, DE CHAQUE CÔTÉ ──
+   Ordre de Pierre du 01/10/2026. Même geste que le bouton « Inscription » :
+   le formulaire des trois jeux s'ouvre par-dessus la grille, on ne quitte pas
+   la page, et l'on ne mène JAMAIS à la boutique HelloAsso, qui est en privé.
+   Le champ `resultat` distingue l'affiche du bouton et du jeu. */
+function brancherLesFlyers(){
+  var gauche = document.getElementById("habillage-gauche");
+  var droite = document.getElementById("habillage-droite");
+  if (!TALLY){
+    if (gauche) gauche.hidden = true;
+    if (droite) droite.hidden = true;
+    return;
+  }
+  /* LA MEME IMAGE DES DEUX COTES depuis le 01/10/2026, donc le meme repere :
+     distinguer la gauche de la droite ne dirait plus rien de ce qui attire. */
+  if (gauche) gauche.addEventListener("click", function(){ ouvrirFormulaire("habillage"); });
+  if (droite) droite.addEventListener("click", function(){ ouvrirFormulaire("habillage"); });
+}
+
+/* ─────────────────────────── L'HABILLAGE S'ALLUME À L'HEURE DITE ──
+   Défi posé par Pierre le 01/10/2026 : « tt soit publié et sans erreur entre
+   18h18min00sec et 18h18min59sec ». Une publication seule ne peut pas tenir
+   une fenêtre de 59 secondes : après le `git push`, GitHub Pages met une à
+   deux minutes à servir la nouvelle version, et ce délai ne se pilote pas.
+   On publie donc à l'avance, l'habillage présent mais ÉTEINT, et c'est la
+   page qui l'allume à la seconde, sur l'horloge de celui qui la regarde.
+   Les pages déjà ouvertes s'allument aussi, sans rechargement. */
+var HABILLAGE_OUVERTURE = Date.UTC(2026, 9, 4, 22, 18, 0);  /* dimanche 4 octobre 2026, 18h18m00 en Guadeloupe, UTC-4 */
+function ouvrirLHabillage(){
+  if (typeof document === "undefined" || !document.querySelectorAll) return;
+  var bandes = document.querySelectorAll(".flyers");
+  if (!bandes.length) return;
+  function lHeureEstVenue(){
+    if (Date.now() < HABILLAGE_OUVERTURE) return false;
+    for (var i = 0; i < bandes.length; i++) bandes[i].classList.add("flyers--ouvert");
+    return true;
+  }
+  if (lHeureEstVenue()) return;
+  var veille = setInterval(function(){ if (lHeureEstVenue()) clearInterval(veille); }, 500);
+}
+
 brancherLesOnglets();
 
 })();
