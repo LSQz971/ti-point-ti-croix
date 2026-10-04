@@ -2262,7 +2262,7 @@ function ouvrirFormulaire(resultat){
      on n'ajoute pas une colonne pour une variante. */
   $("#cadre").src = "https://tally.so/embed/" + TALLY +
     "?hideTitle=1&transparentBackground=1" +
-    "&jeu=ti-point-ti-croix" +
+    "&jeu=" + (resultat === "inscription" ? "inscription" : "ti-point-ti-croix") +
     "&mode=" + encodeURIComponent($("#mode").value) +
     "&niveau=" + encodeURIComponent($("#difficulte").value) +
     "&parties=" + etat.parties +
