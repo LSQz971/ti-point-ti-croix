@@ -4673,6 +4673,7 @@ function demarrer(){
     if (e.origin !== "https://tally.so") return;
     if (typeof e.data !== "string" || e.data.indexOf("Tally.FormSubmitted") === -1) return;
     etat.forme = true; noterInscrit(); sauver();
+    var ongl = document.getElementById("onglet-inscription"); if (ongl) ongl.hidden = true;
     setTimeout(fermerFormulaire, 1600);
   });
 }
@@ -4735,13 +4736,11 @@ function brancherLesOnglets(){
    formulaire PAR-DESSUS la grille. On ne demande donc aucune confirmation, la
    partie en cours reste derrière le voile et se retrouve intacte, contrairement
    aux onglets voisins qui, eux, changent de page.
-   ⚠️ ET IL NE REGARDE PAS `etat.forme`. Ce repère sert à ne plus rien demander
-   DE SOI-MÊME à qui a déjà répondu ; il n'a pas à fermer une porte que la
-   personne pousse elle-même. Qui touche « Inscription » veut le formulaire. */
+   ⚠️ CORRIGE LE 11/10/2026 (Pierre : « si tu es dans 1 tu es dans tout »). Qui a deja donne ses coordonnees dans N'IMPORTE QUEL des trois jeux ne revoit plus ni l'onglet Inscription ni la porte des affiches : le repere commun lsqz-coordonnees-donnees ferme les deux. */
 function brancherLInscription(){
   var bouton = document.getElementById("onglet-inscription");
   if (!bouton) return;
-  if (!TALLY){ bouton.hidden = true; return; }
+  if (!TALLY || dejaInscrit()){ bouton.hidden = true; return; }
   bouton.addEventListener("click", function(){ ouvrirFormulaire("inscription"); });
 }
 /* ───────────────────────────────── LES DEUX FLYERS, DE CHAQUE CÔTÉ ──
@@ -4759,8 +4758,11 @@ function brancherLesFlyers(){
   }
   /* LA MEME IMAGE DES DEUX COTES depuis le 01/10/2026, donc le meme repere :
      distinguer la gauche de la droite ne dirait plus rien de ce qui attire. */
-  if (gauche) gauche.addEventListener("click", function(){ ouvrirFormulaire("habillage"); });
-  if (droite) droite.addEventListener("click", function(){ ouvrirFormulaire("habillage"); });
+  [gauche, droite].forEach(function(b){
+    if (!b) return;
+    if (dejaInscrit()){ b.style.pointerEvents = "none"; b.tabIndex = -1; }
+    b.addEventListener("click", function(){ if (!dejaInscrit()) ouvrirFormulaire("habillage"); });
+  });
 }
 
 /* ─────────────────────────── L'HABILLAGE S'ALLUME À L'HEURE DITE ──
