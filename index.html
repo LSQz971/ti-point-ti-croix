@@ -2773,16 +2773,43 @@ function basculerPalette(){
   pal.hidden = !pal.hidden;
 }
 
+/* ⛔ QUI OUVRE CETTE PARTIE, « P » les points (le doigt) ou « IA » les croix
+   (l'ordinateur). HORS TOURNOI, RIEN NE CHANGE : le joueur ouvre, comme depuis
+   le premier jour. DANS UN TOURNOI, c'est le vainqueur de sa partie
+   précédente, et l'ordinateur prend le trait de force quand c'est lui.
+   Deux sources, dans cet ordre : ce qu'on vient de voir de ses propres yeux,
+   puis le mot de l'arbitre, qui seul survit à un rechargement. */
+function quiOuvre(){
+  if (!maPartieDeTournoi) return "P";
+  if (debutSuivant && debutSuivant.code === maPartieDeTournoi.code){
+    return debutSuivant.qui === "IA" ? "IA" : "P";
+  }
+  var mp = (tournoi && tournoi.vue && tournoi.vue.maPartie) ? tournoi.vue.maPartie : null;
+  return (mp && mp.commence === "IA") ? "IA" : "P";
+}
+
 function nouvellePartie(){
   if (enLigne()) return;               /* la table en ligne mène sa propre manche */
   plateau = [];
   for (var r = 0; r < TAILLE; r++) plateau.push(new Array(TAILLE).fill(""));
-  fini = false; tour = "P"; humain = true; dernierCoup = null;
+  var ouvre = quiOuvre();
+  debutDeCettePartie = ouvre;
+  fini = false; tour = ouvre; humain = (ouvre === "P"); dernierCoup = null;
   var m = $("#marques");
   while (m.firstChild) m.removeChild(m.firstChild);
-  $("#etat").textContent = "À toi de jouer";
   var b = $("#partager");
   if (b){ b.hidden = true; b.dataset.texte = ""; }   /* la victoire d'avant n'est plus */
+  /* L'ORDINATEUR OUVRE : aucun chrono, il n'attend aucun doigt. Son coup passe
+     par le chemin ordinaire de jouer(), qui rendra la main et lancera le
+     chrono tout seul. Le délai est un peu plus long que celui d'un coup en
+     cours de partie : on voit la grille vide avant que la croix tombe. */
+  if (ouvre === "IA"){
+    arreterChrono();
+    $("#etat").textContent = "L'ordinateur ouvre…";
+    setTimeout(coupOrdinateur, 520);
+    return;
+  }
+  $("#etat").textContent = "À toi de jouer";
   lancerChrono();
 }
 
@@ -2874,6 +2901,16 @@ var ecran = "accueil";
 var tousLesTournois = null;      /* la dernière réponse de /tournois */
 var sondage = null;              /* le rappel régulier, tant que la boîte est ouverte */
 var maPartieDeTournoi = null;    /* la partie de tournoi en cours, contre l'ordinateur */
+/* ⛔ QUI OUVRE LA PROCHAINE PARTIE DE TOURNOI (Pierre, 23/10/2026 : « quand je
+   gagne je commence, quand la machine gagne elle commence obligatoirement »).
+   L'ARBITRE EN GARDE LA MÉMOIRE, dans `maPartie.commence` : un rechargement de
+   page ne rend donc à personne une ouverture perdue. Ces deux variables-ci ne
+   sont qu'une avance sur son mot : le résultat est connu ICI avant que la
+   réponse du serveur revienne, et « Rejouer » tombe souvent plus vite que le
+   réseau. `debutSuivant` porte le code du tournoi, pour ne pas suivre le
+   joueur d'un tournoi dans un autre. */
+var debutSuivant = null;         /* { code, qui } ou rien */
+var debutDeCettePartie = "P";    /* qui a ouvert la partie en cours, pour le nul */
 var reglagesAvantLeTournoi = null;   /* ce que le joueur avait choisi avant d'entrer */
 /* Le tournoi qu'on vient de quitter : il reste sous les yeux le temps qu'on
    lise son classement et qu'on le partage. */
@@ -3309,6 +3346,7 @@ function quitterLeTournoi(){
 
   tournoi = null;
   maPartieDeTournoi = null;
+  debutSuivant = null;          /* l'ouverture gagnée ou perdue reste dans ce tournoi */
   marquerMonTournoi(null);      /* on ne le reprendra pas au prochain chargement */
   $("#difficulte").disabled = false;
   /* SA TABLE À LUI REVIENT. C'est cela, « revenir sur une table hors
@@ -4183,7 +4221,14 @@ function montrerMonMatch(vue){
       bloc.innerHTML = "<b>" + (q.parties ? ("Partie " + (q.jouees + 1) + " sur " + q.parties + ".")
                                           : ("Tu as joué " + q.jouees + (q.jouees > 1 ? " parties." : " partie."))) + "</b>" +
         "<span>Contre l'ordinateur, en " + q.niveau +
-        ". Le niveau est imposé, il est le même pour tout le monde.</span>" +
+        ". Le niveau est imposé, il est le même pour tout le monde. " +
+        /* ⛔ LA RÈGLE S'ÉCRIT LÀ OÙ LE JOUEUR LA LIT (Pierre, 23/10/2026).
+           Sans cette phrase, voir l'ordinateur ouvrir tout seul se lit comme
+           un défaut, pas comme une règle, et c'est le joueur qui se méfie. */
+        (q.commence === "IA"
+          ? "Tu as perdu la dernière : l'ordinateur ouvre celle-ci."
+          : "Le vainqueur ouvre la partie suivante : c'est à toi d'ouvrir.") +
+        "</span>" +
         '<button id="tr-jouer" type="button">' +
         (enCoursDeTournoi() ? "Reprendre ma partie" : "Jouer ma partie") + "</button>";
       /* ⚠️ DEUX BOUTONS NE DISENT JAMAIS LE MÊME MOT (Pierre, 11/09/2026 :
@@ -4449,6 +4494,13 @@ function rapporterMaPartie(message, cellules){
   $("#difficulte").disabled = false;
   var gagne = !!cellules && message.indexOf("Bravo") !== -1;
   var nul = message.indexOf("nul") !== -1;
+  /* ⛔ LE VAINQUEUR OUVRE LA SUIVANTE (Pierre, 23/10/2026). On le note ICI,
+     sans attendre la réponse de l'arbitre : « Rejouer » tombe souvent avant
+     elle, et la partie repartirait alors sur l'ouverture de la précédente. Un
+     match nul ne change rien, personne n'a gagné : celui qui avait ouvert
+     ouvre encore. */
+  debutSuivant = { code: mienne.code,
+                   qui: gagne ? "P" : (nul ? debutDeCettePartie : "IA") };
   fetch(SERVEUR + "/tournoi/" + mienne.code + "/partie", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
